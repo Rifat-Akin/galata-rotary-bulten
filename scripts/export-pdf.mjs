@@ -222,13 +222,21 @@ export async function exportIssueToPDF(issueId, options = {}) {
   const destPdfPath = path.join(outputDir, pdfFileName);
 
   const renderUrl = `http://127.0.0.1:${port}/render?issue=${encodeURIComponent(issueId)}`;
+  const tmpProfileDir = fs.mkdtempSync(path.join(os.tmpdir(), 'galata-pdf-chrome-'));
 
   const chromeFlags = [
     '--headless=new',
     '--disable-gpu',
+    '--no-first-run',
+    '--no-default-browser-check',
+    '--disable-component-update',
+    '--disable-background-networking',
+    '--disable-breakpad',
+    '--disable-crash-reporter',
     '--no-pdf-header-footer',
     '--run-all-compositor-stages-before-draw',
     '--virtual-time-budget=2000',
+    `--user-data-dir=${tmpProfileDir}`,
     `--print-to-pdf=${destPdfPath}`,
     renderUrl
   ];
@@ -244,6 +252,12 @@ export async function exportIssueToPDF(issueId, options = {}) {
     await execFileAsync(chromePath, chromeFlags, { timeout: 45000 });
   } catch (err) {
     throw new Error(`Chrome headless PDF generation failed for "${issueId}": ${err.message}`);
+  } finally {
+    try {
+      fs.rmSync(tmpProfileDir, { recursive: true, force: true });
+    } catch {
+      // Ignore transient Windows file lock during teardown
+    }
   }
 
   const duration = ((Date.now() - startTime) / 1000).toFixed(2);

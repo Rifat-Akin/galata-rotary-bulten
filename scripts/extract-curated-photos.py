@@ -76,7 +76,7 @@ PHOTO_MAPPINGS = {
         ('galata', '00005275', '00005275-okcumusa-ilkokulu-vefa.jpg', '00005275.jpg'),
         ('galata', '00005353', '00005353-nostalji-23-eylul-2019.jpg', '00005353.jpg'),
         ('galata', '00005340', '00005340-baris-gunu-mesaji.jpg', '00005340.jpg'),
-        ('bulten', '00003031', 'kitap_beyoglu_eski_yeni.jpg', '00003031.jpg'),
+        ('bulten', '00003031', 'kitap_beyoglu_eski_yeni.jpg', None),
     ],
     '2026-10': [
         ('galata', '00005362', '00005362-ryla-egiticinin-egitimi-afis.jpg', '00005362.jpg'),
@@ -181,25 +181,14 @@ def extract_curated():
                 actual_name = matching[0]
                 data = source_z.read(actual_name)
                 
-                # Write with target descriptive name
-                target_file = os.path.join(month_dir, target_name)
-                with open(target_file, 'wb') as f:
+                # Write only canonical filename used by data/issues/*.json (no duplicate copies)
+                canonical_name = alias if alias else target_name
+                canonical_file = os.path.join(month_dir, canonical_name)
+                with open(canonical_file, 'wb') as f:
                     f.write(data)
-                
-                # Also save original WhatsApp filename and short alias
-                orig_file = os.path.join(month_dir, actual_name)
-                if orig_file != target_file:
-                    with open(orig_file, 'wb') as f:
-                        f.write(data)
-                        
-                if alias:
-                    alias_file = os.path.join(month_dir, alias)
-                    if alias_file != target_file and alias_file != orig_file:
-                        with open(alias_file, 'wb') as f:
-                            f.write(data)
                             
                 total_extracted += 1
-                print(f"  ✓ [{month}] {prefix} -> {target_name} ({len(data)} bytes)")
+                print(f"  ✓ [{month}] {prefix} -> {canonical_name} ({len(data)} bytes)")
                 
         print(f"\n[3/3] Successfully extracted {total_extracted} curated photos.")
         print(f"Disk hygiene maintained: 0 temporary zip extractions on disk.")
