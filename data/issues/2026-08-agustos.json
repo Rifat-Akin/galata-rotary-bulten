@@ -1,0 +1,154 @@
+{
+  "id": "2026-08-agustos",
+  "issueNumber": 2,
+  "rotaryYear": "2026-2027",
+  "month": "Ağustos",
+  "year": 2026,
+  "theme": "KALICI ETKİ YARAT",
+  "rotaryMonthTheme": "Üyelik ve Yeni Kulüp Geliştirme Ayı",
+  "club": {
+    "name": "Galata Rotary Kulübü",
+    "district": "UR 2420. Bölge",
+    "clubNo": "64336",
+    "charterDate": "27.01.2004",
+    "foundationDate": "02.09.2003",
+    "meeting": "Her Pazartesi 19:30 | Grand Hyatt İstanbul Taksim & Zoom"
+  },
+  "officers": {
+    "riPresident": "Olayinka Hakeem Babalola",
+    "districtGovernor": "Erden Gökmen",
+    "assistantGovernor": "Yeşim Guvernör",
+    "president": "Sevilay Aksel",
+    "secretary": "Gökhan Alpertunga",
+    "treasurer": "Burhan Tokgöz",
+    "bulletinCommittee": [
+      "Rifat Akın Kaplan",
+      "Özgür Kuddar",
+      "GDB Polat Özcan"
+    ]
+  },
+  "presidentMessage": {
+    "title": "Büyük Zafer'in 104. Yılında Birlik ve Hizmet Ruhu",
+    "body": "Sevgili Galata Rotary Ailemiz ve Değerli Dostlarım,\n\nAğustos ayı, hem milletimizin bağımsızlık destanı olan 30 Ağustos Zafer Bayramı'nın 104. yılını gururla kutladığımız hem de Rotary'de 'Üyelik ve Yeni Kulüp Geliştirme Ayı' olarak gücümüze güç kattığımız müstesna bir dönemdir.\n\nKulübümüz için bu ay çok önemli bir dönüm noktasını hayata geçirdik: Üyelerimizin oybirliğiyle alınan kararla, fiziki toplantılarımızı Taksim'in kalbinde yer alan Grand Hyatt İstanbul'a taşıdık. Yeni mekânımızda gerçekleştirdiğimiz ilk toplantılarımızdaki yüksek katılım ve enerji, kulübümüzün geleceğine duyduğumuz inancı katbekat artırdı.\n\nGeçmiş Dönem Guvernörümüz Sayın Gaye Binark'ı ağırladığımız üyelik odaklı toplantımızda, Rotary'de büyümenin yalnızca sayısal bir artış değil; ortak ideallere gönül vermiş, toplumda fark yaratan bireylerin buluşması olduğunu derinlemesine konuştuk. Sağlık alanında ihtiyaç sahibi bir kardeşimize sağladığımız medikal cihaz desteği ve Burhan Yentürk dostumuzla gerçekleştirdiğimiz Büyük Zafer anması, hizmet heyecanımızın en somut göstergeleri oldu.\n\nCumhuriyetimizin kurucusu Gazi Mustafa Kemal Atatürk ve silah arkadaşlarını minnetle anarken, kulübümüzün yeni dönemdeki birlikteliğinin daim olmasını diliyorum.\n\nEn İçten Rotaryen Sevgilerimle,",
+    "photo": "assets/photos/2026-08/baskan_sevilay_aksel.jpg"
+  },
+  "articles": [
+    {
+      "id": "art-01",
+      "category": "Kulüp Kararı",
+      "date": "3 Ağustos 2026",
+      "title": "Yeni Toplantı Mekânımız: Grand Hyatt İstanbul Taksim",
+      "venue": "Grand Hyatt İstanbul Taksim",
+      "summary": "Galata Rotary Kulübü Yönetim Kurulu ve üyelerinin oybirliğiyle aldığı kararla, 2026–2027 dönemindeki haftalık fiziki toplantı mekânımız Grand Hyatt İstanbul Taksim olarak belirlendi. Taksim'in merkezindeki prestijli konumu ve modern altyapısıyla kulüp projelerimize yeni bir ivme kazandıracak.",
+      "layout": "single-col",
+      "photos": [
+        {
+          "url": "assets/photos/2026-08/00005031.jpg",
+          "caption": "Grand Hyatt İstanbul Taksim İlk Buluşmamız"
+        }
+      ]
+    },
+    {
+      "id": "art-02",
+      "category": "Konuk Konuşmacı",
+      "date": "10 Ağustos 2026",
+      "title": "GDG Gaye Binark ile 'Üyelik Üzerine Her Şey'",
+      "venue": "Grand Hyatt İstanbul Taksim",
+      "summary": "Ağustos Üyelik Ayı kapsamında UR 2420. Bölge Geçmiş Dönem Guvernörü Gaye Binark kulübümüzün konuğu oldu. 'Rotary'de Üyelik, Aidiyet ve Sürdürülebilir Büyüme' başlıklı ilham verici sunumunda bölge kulüp başkanları ve geniş bir üye topluluğu hazır bulundu.",
+      "layout": "bento-4",
+      "photos": [
+        {
+          "url": "assets/photos/2026-08/00005032.jpg",
+          "caption": "GDG Gaye Binark Sunumunu Gerçekleştirirken"
+        },
+        {
+          "url": "assets/photos/2026-08/00005033.jpg",
+          "caption": "Bölge Kulüp Başkanlarımızın Katılımı"
+        },
+        {
+          "url": "assets/photos/2026-08/00005034.jpg",
+          "caption": "Üyelik Komitesi İstişareleri"
+        },
+        {
+          "url": "assets/photos/2026-08/00005035.jpg",
+          "caption": "Dönem Başkanı Sevilay Aksel'den Teşekkür Belgesi Takdimi"
+        }
+      ]
+    },
+    {
+      "id": "art-03",
+      "category": "Engelsiz Galata",
+      "date": "17 Ağustos 2026",
+      "title": "Sağlık Desteği: Kanser Hastası İhtiyaç Sahibine Medikal Cihaz Bağışı",
+      "venue": "İstanbul",
+      "summary": "Engelsiz Galata komitemiz ve üyelerimizin ortak dayanışmasıyla, onkolojik tedavi gören ihtiyaç sahibi bir vatandaşımıza özel medikal cihaz ve tekerlekli sandalye temin edilerek teslimatı gerçekleştirildi. Yaşamlara dokunan bu destekle kalıcı bir iyilik bağı kuruldu.",
+      "layout": "single-col",
+      "photos": [
+        {
+          "url": "assets/photos/2026-08/00005046.jpg",
+          "caption": "Medikal Destek ve Dayanışma Paylaşımı"
+        }
+      ]
+    },
+    {
+      "id": "art-04",
+      "category": "Çevrimiçi Konferans",
+      "date": "24 Ağustos 2026",
+      "title": "Jeofizik Yük. Müh. Burak Çatlıoğlu ile Afet Risklerini Azaltma",
+      "venue": "Zoom Çevrimiçi Toplantı",
+      "summary": "Kulübümüzün haftalık çevrimiçi toplantısında Jeofizik Yüksek Mühendisi Burak Çatlıoğlu konuk edildi. 'Doğa Kaynaklı Afetlerin Risk Azaltma Çalışmaları ve Marmara Depremine Hazırlık' başlığı altında afet bilinci ve kentsel dayanıklılık detaylı olarak ele alındı.",
+      "layout": "single-col",
+      "photos": [
+        {
+          "url": "assets/photos/2026-08/00005124.jpg",
+          "caption": "Burak Çatlıoğlu Afet Risk Semineri Afişi"
+        }
+      ]
+    },
+    {
+      "id": "art-05",
+      "category": "Özel Toplantı",
+      "date": "31 Ağustos 2026",
+      "title": "30 Ağustos Zafer Bayramı Özel Toplantısı: Burhan Yentürk Konuğumuz Oldu",
+      "venue": "Grand Hyatt İstanbul Taksim",
+      "summary": "Büyük Zafer'in 104. yılı onuruna düzenlenen özel toplantımızda araştırmacı-yazar Burhan Yentürk, 'Büyük Taarruz'dan Büyük Zafer'e Türk Milletinin Bağımsızlık Yolu' başlıklı etkileyici bir konferans verdi. Üyelerimiz ve misafirlerimiz Türk bayraklarıyla zafer coşkusunu paylaştı.",
+      "layout": "bento-4",
+      "photos": [
+        {
+          "url": "assets/photos/2026-08/00005145.jpg",
+          "caption": "30 Ağustos Zafer Bayramı Özel Toplantı Afişi"
+        },
+        {
+          "url": "assets/photos/2026-08/00005203.jpg",
+          "caption": "Zafer Toplantısı Açılış Seremonisi"
+        },
+        {
+          "url": "assets/photos/2026-08/00005204.jpg",
+          "caption": "Burhan Yentürk Sunumunu Gerçekleştirirken"
+        },
+        {
+          "url": "assets/photos/2026-08/00005208.jpg",
+          "caption": "Galata Rotary Ailesi 30 Ağustos Zafer Coşkusu"
+        }
+      ]
+    }
+  ],
+  "culture": {
+    "title": "Galata Kültür Köşesi",
+    "book": {
+      "title": "Pera Hatıratı: Beyoğlu ve Galata Kültür Mirası",
+      "author": "Pera ve Galata Araştırmaları",
+      "cover": "assets/photos/2026-08/kitap_pera_hatirati.jpg",
+      "summary": "19. yüzyıldan Cumhuriyet'e uzanan dönemde Pera ve Galata'nın çok kültürlü sokakları, tiyatroları, elçilikleri ve unutulmaz simalarını belgeleyen zengin bir kültür mirası seçkisi. Semtin kozmopolit ruhunu, pasajlarını ve Galata'dan Beyoğlu'na uzanan kültürel dönüşümü aydınlatıyor."
+    }
+  },
+  "backCover": {
+    "theme": "ÇOCUK FELCİNE SON",
+    "subTheme": "End Polio Now",
+    "color": "#E01E26",
+    "contact": {
+      "instagram": "@galatarotarykulubu",
+      "web": "www.galatarotary.org"
+    }
+  }
+}

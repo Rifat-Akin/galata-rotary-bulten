@@ -1,0 +1,25 @@
+{
+  "name": "galata-rotary-bulten",
+  "version": "1.0.0",
+  "description": "Galata Rotary Bülten Stüdyosu — 2026-2027 Dönemi Web Tabanlı Bülten Stüdyosu & Dergi Üretim Motoru",
+  "type": "module",
+  "main": "server.mjs",
+  "scripts": {
+    "start": "node server.mjs",
+    "validate": "node scripts/validate-issues.mjs",
+    "test": "node scripts/validate-issues.mjs",
+    "extract-photos": "python scripts/extract-curated-photos.py",
+    "export-pdf": "node scripts/export-pdf.mjs"
+  },
+  "keywords": [
+    "rotary",
+    "galata-rotary",
+    "bulletin-studio",
+    "bulten-studyosu",
+    "kalici-etki-yarat",
+    "headless-chrome",
+    "pdf"
+  ],
+  "author": "Galata Rotary Kulübü Bülten Komitesi (Rifat Akın Kaplan, Özgür Kuddar, GDB Polat Özcan)",
+  "license": "MIT"
+}

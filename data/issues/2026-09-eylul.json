@@ -1,0 +1,166 @@
+{
+  "id": "2026-09-eylul",
+  "issueNumber": 3,
+  "rotaryYear": "2026-2027",
+  "month": "Eylül",
+  "year": 2026,
+  "theme": "KALICI ETKİ YARAT",
+  "rotaryMonthTheme": "Temel Eğitim ve Okuryazarlık Ayı",
+  "club": {
+    "name": "Galata Rotary Kulübü",
+    "district": "UR 2420. Bölge",
+    "clubNo": "64336",
+    "charterDate": "27.01.2004",
+    "foundationDate": "02.09.2003",
+    "meeting": "Her Pazartesi 19:30 | Grand Hyatt İstanbul Taksim & Zoom"
+  },
+  "officers": {
+    "riPresident": "Olayinka Hakeem Babalola",
+    "districtGovernor": "Erden Gökmen",
+    "assistantGovernor": "İhsan Ercan",
+    "president": "Sevilay Aksel",
+    "secretary": "Gökhan Alpertunga",
+    "treasurer": "Burhan Tokgöz",
+    "bulletinCommittee": [
+      "Rifat Akın Kaplan",
+      "Özgür Kuddar",
+      "GDB Polat Özcan"
+    ]
+  },
+  "presidentMessage": {
+    "title": "Eğitimle Büyüyen Umut, Barışla Güçlenen Gelecek",
+    "body": "Değerli Rotaryen Dostlarım ve Sevgili Galata Ailemiz,\n\nEylül ayı, Rotary dünyasında 'Temel Eğitim ve Okuryazarlık Ayı' olarak kutlanırken, kulübümüz için de çok özel bir dönüm noktasını simgeler: 23 Eylül 2003 tarihinde temelleri atılan Galata Rotary Kulübümüzün 23. Kuruluş Yıldönümünü büyük bir onur ve gururla geride bıraktık. 23 yıldır süregelen bu kutlu hizmet yolculuğunda emeği geçen tüm kurucu üyelerimize ve geçmiş dönem başkanlarımıza şükranlarımı sunuyorum.\n\n21 Eylül Dünya Barış Günü'nde Guvernörümüz Sayın Erden Gökmen'in vurguladığı gibi: 'Barış yalnızca savaşların olmaması değil; adaletin, karşılıklı anlayışın, kaliteli eğitimin ve kalıcı etkinin bir yaşam biçimi haline gelmesidir.' Bizler de bu anlayışla, temel eğitime erişimi güçlendirmek adına Bölge Komite Başkanımız Sayın Pınar Pirim'i ağırladık; okuryazarlık alanındaki yenilikçi projeleri değerlendirdik.\n\nEngelsiz Galata vizyonumuz doğrultusunda Beyoğlu Belediyesi iş birliğiyle Serebral Palsili ihtiyaç sahibi yavrumuza 29.500 TL bütçeyle özel engelli pusetini teslim ederek hayatına kalıcı bir dokunuş yaptık. KAÇUV ile gerçekleştirdiğimiz anne ve çocuk sağlığı seminerimiz ise toplum sağlığına bütüncül yaklaşımımızın güçlü bir yansıması oldu.\n\nEğitimle aydınlanan, dayanışmayla büyüyen bir gelecek için el ele çalışmaya devam edeceğiz.\n\nSevgi ve Saygılarımla,",
+    "photo": "assets/photos/2026-09/baskan_sevilay_aksel.jpg"
+  },
+  "articles": [
+    {
+      "id": "art-01",
+      "category": "Galata Sosyal",
+      "date": "1 Eylül 2026",
+      "title": "Ritz-Carlton Açıkhava Sineması Dostluk Buluşması",
+      "venue": "The Ritz-Carlton Açık Hava Terası",
+      "summary": "Sosyal Komitemizin organizasyonuyla The Ritz-Carlton Açık Hava Terası'nda düzenlenen film gösterimi ve dostluk gecesinde kulüp üyelerimiz keyifli anlar paylaştı. Gece vesilesiyle oluşturulan bağış fonuyla öğrenci burslarımıza 5.000 TL ilave katkı sağlandı.",
+      "layout": "two-col",
+      "photos": [
+        {
+          "url": "assets/photos/2026-09/00005281.jpg",
+          "caption": "Eylül Ayı Etkinlik Programı"
+        },
+        {
+          "url": "assets/photos/2026-09/00005340.jpg",
+          "caption": "21 Eylül Dünya Barış Günü Çağrısı"
+        }
+      ]
+    },
+    {
+      "id": "art-02",
+      "category": "Konuk Konuşmacı",
+      "date": "14 Eylül 2026",
+      "title": "Bölge Komite Başkanı Pınar Pirim ile 'Temel Eğitim ve Okuryazarlık'",
+      "venue": "Grand Hyatt İstanbul Taksim",
+      "summary": "UR 2420. Bölge Temel Eğitim ve Okuryazarlık Komite Başkanı Pınar Pirim kulübümüzün konuğu oldu. 18. Grup Guvernör Yardımcısı İhsan Ercan'ın da katıldığı toplantıda, okullarda okuma alışkanlığının geliştirilmesi ve dijital eğitim materyallerine erişim projeleri ele alındı.",
+      "layout": "bento-4",
+      "photos": [
+        {
+          "url": "assets/photos/2026-09/00005288.jpg",
+          "caption": "Pınar Pirim ve Dönem Başkanı Sevilay Aksel"
+        },
+        {
+          "url": "assets/photos/2026-09/00005290.jpg",
+          "caption": "Başkan Sevilay Aksel Toplantıyı Açarken"
+        },
+        {
+          "url": "assets/photos/2026-09/00005291.jpg",
+          "caption": "Temel Eğitim Sunumu ve Üyelerimizin Katılımı"
+        },
+        {
+          "url": "assets/photos/2026-09/00005294.jpg",
+          "caption": "Guvernör Yardımcısı İhsan Ercan ve Kulüp Yöneticileri"
+        }
+      ]
+    },
+    {
+      "id": "art-03",
+      "category": "Engelsiz Galata",
+      "date": "28 Eylül 2026",
+      "title": "Serebral Palsili Evladımıza Özel Engelli Puseti Teslimi",
+      "venue": "Beyoğlu Belediyesi Sağlık İşleri Müdürlüğü",
+      "summary": "Beyoğlu Belediyesi Sosyal İşler Müdürlüğü iş birliğiyle yürüttüğümüz Engelsiz Galata projemiz kapsamında, Serebral Palsili ihtiyaç sahibi çocuğumuza özel donanımlı engelli puseti teslim edildi. 29.500 TL bağış ile hayatlara kalıcı dokunuş gerçekleştirdik.",
+      "layout": "single-col",
+      "photos": [
+        {
+          "url": "assets/photos/2026-09/00005382.jpg",
+          "caption": "Özel Medikal Puset Teslim Töreni Anı"
+        }
+      ]
+    },
+    {
+      "id": "art-04",
+      "category": "Konuk Konuşmacı",
+      "date": "28 Eylül 2026",
+      "title": "KAÇUV Medya Güner Uygun ile 'Anne ve Çocuk Sağlığına Bütüncül Bakış'",
+      "venue": "Grand Hyatt İstanbul Taksim",
+      "summary": "Kanserli Çocuklara Umut Vakfı (KAÇUV) Proje Yöneticisi Medya Güner Uygun'u ağırladığımız toplantıda, çocukluk çağı kanserlerinde erken teşhis ve ailelere yönelik psikososyal destek mekanizmaları konuşuldu. Galatasaray RK dostlarımızın katılımıyla dayanışma büyüdü.",
+      "layout": "bento-4",
+      "photos": [
+        {
+          "url": "assets/photos/2026-09/00005346.jpg",
+          "caption": "KAÇUV Semineri Resmî Toplantı Afişi"
+        },
+        {
+          "url": "assets/photos/2026-09/00005393.jpg",
+          "caption": "Medya Güner Uygun Sunumunu Gerçekleştirirken"
+        },
+        {
+          "url": "assets/photos/2026-09/00005394.jpg",
+          "caption": "Galata ve Galatasaray RK Dostlarının Katılımı"
+        },
+        {
+          "url": "assets/photos/2026-09/00005400.jpg",
+          "caption": "Teşekkür Plaketi Takdimi ve Ortak Hizmet Sözü"
+        }
+      ]
+    },
+    {
+      "id": "art-05",
+      "category": "Vefa & Nostalji",
+      "date": "23 Eylül 2026",
+      "title": "Galata Rotary Kulübü 23. Yaşında & Sanatçı Gülsen Tuncer'e Vefa",
+      "venue": "İstanbul",
+      "summary": "23 Eylül 2003'te kurulan kulübümüzün 23. yaşını kutlarken; 2015 yılı konuğumuz olan merhume tiyatro sanatçısı Gülsen Tuncer'i saygıyla andık. Ayrıca 13 Eylül 2014 Okçumusa İlkokulu kırtasiye projemizi ve 23 Eylül 2019 dostluk anılarımızı hafızalarda tazeledik.",
+      "layout": "bento-3",
+      "photos": [
+        {
+          "url": "assets/photos/2026-09/00005321.jpg",
+          "caption": "Merhume Sanatçı Gülsen Tuncer Galata RK Konuğuyken"
+        },
+        {
+          "url": "assets/photos/2026-09/00005275.jpg",
+          "caption": "13 Eylül 2014 Okçumusa İlkokulu Eğitime Destek"
+        },
+        {
+          "url": "assets/photos/2026-09/00005353.jpg",
+          "caption": "23 Eylül 2019 Kuruluş Yıldönümü Dostluk Hatırası"
+        }
+      ]
+    }
+  ],
+  "culture": {
+    "title": "Galata Kültür Köşesi",
+    "book": {
+      "title": "Beyoğlu: Eski Yeni (Then & Now)",
+      "author": "Timurtaş Onan",
+      "cover": "assets/photos/2026-09/kitap_beyoglu_eski_yeni.jpg",
+      "summary": "Fotoğraf sanatçısı Timurtaş Onan’ın 15 yıla yayılan çalışması, Beyoğlu’nun değişimini siyah beyaz fotoğraflarla belgeliyor. Tarihî mekânların yanı sıra semtin esnafını, sanatçılarını, zanaatkârlarını ve gündelik hayatını da görünür kılıyor."
+    }
+  },
+  "backCover": {
+    "theme": "ÇOCUK FELCİNE SON",
+    "subTheme": "End Polio Now",
+    "color": "#E01E26",
+    "contact": {
+      "instagram": "@galatarotarykulubu",
+      "web": "www.galatarotary.org"
+    }
+  }
+}

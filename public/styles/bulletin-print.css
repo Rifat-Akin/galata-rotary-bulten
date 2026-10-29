@@ -1,0 +1,1098 @@
+/**
+ * Galata Rotary Bülten Stüdyosu — Official Print & Magazine Stylesheet
+ * Standard: A4 Portrait (210mm x 297mm), 0-margin @page, Zero Ligature Breakage
+ * Corporate Palette:
+ *   - Galata Laciverti: #0B2545
+ *   - Rotary Kraliyet Mavisi: #17458F
+ *   - Rotary Altını: #F7A81B
+ *   - Sıcak Fildişi Kağıt: #FAF8F3
+ *   - Polio Kızılcık Kırmızısı: #E01E26
+ *   - Gövde Metin Rengi: #16243B
+ */
+
+:root {
+  --color-galata-navy: #0B2545;
+  --color-rotary-blue: #17458F;
+  --color-rotary-gold: #F7A81B;
+  --color-paper-ivory: #FAF8F3;
+  --color-polio-red: #E01E26;
+  --color-text-main: #16243B;
+  --color-text-muted: #53627A;
+  --color-border-subtle: #D8DFE8;
+  --color-card-bg: #FFFFFF;
+  --page-width: 210mm;
+  --page-height: 297mm;
+}
+
+/* -------------------------------------------------------------
+ * 1. Global Page Setup & Print Media Rules
+ * ------------------------------------------------------------- */
+@page {
+  size: 210mm 297mm;
+  margin: 0;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+html, body {
+  width: 210mm;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: #E2E8F0;
+  color: var(--color-text-main);
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 10pt;
+  line-height: 1.45;
+}
+
+/* -------------------------------------------------------------
+ * 2. Semantic A4 Page Container (.a4-page)
+ * ------------------------------------------------------------- */
+.a4-page {
+  width: 210mm;
+  height: 297mm;
+  max-height: 297mm;
+  box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
+  page-break-after: always;
+  break-after: page;
+  background: #FAF8F3;
+  color: #16243B;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+  display: flex;
+  flex-direction: column;
+  margin: 0 auto 10mm auto;
+  box-shadow: 0 10px 25px rgba(11, 37, 69, 0.12);
+}
+
+@media print {
+  body {
+    background: transparent !important;
+  }
+  .no-print, .studio-sidebar, .studio-toolbar, .zoom-controls {
+    display: none !important;
+  }
+  .a4-page {
+    margin: 0 !important;
+    box-shadow: none !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    width: 210mm !important;
+    height: 297mm !important;
+    max-height: 297mm !important;
+    background: #FAF8F3 !important;
+    color: #16243B !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .a4-page:last-child {
+    page-break-after: auto !important;
+    break-after: auto !important;
+  }
+}
+
+/* Inner Page Structure */
+.page-inner {
+  padding: 10mm 14mm 12mm 14mm;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+/* Running Header */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid var(--color-galata-navy);
+  padding-bottom: 2mm;
+  margin-bottom: 4mm;
+  font-size: 7.5pt;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--color-galata-navy);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.page-header-left {
+  display: flex;
+  align-items: center;
+  gap: 3mm;
+}
+
+.page-header-tag {
+  background: var(--color-galata-navy);
+  color: #FFFFFF;
+  padding: 1px 6px;
+  border-radius: 2px;
+  font-size: 6.5pt;
+  font-weight: 700;
+}
+
+.page-header-right {
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+/* Running Footer */
+.page-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid var(--color-border-subtle);
+  padding-top: 2.5mm;
+  margin-top: auto;
+  font-size: 7pt;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.page-footer-theme {
+  font-weight: 700;
+  color: var(--color-galata-navy);
+  letter-spacing: 0.5px;
+}
+
+.page-footer-page-num {
+  font-weight: 700;
+  color: var(--color-rotary-blue);
+  background: rgba(23, 69, 143, 0.08);
+  padding: 1px 7px;
+  border-radius: 10px;
+}
+
+/* -------------------------------------------------------------
+ * 3. Page 1: Cover & Künye System
+ * ------------------------------------------------------------- */
+.page-cover {
+  padding: 8mm 12mm 8mm 12mm;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: #FAF8F3;
+  position: relative;
+}
+
+.cover-masthead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 3mm;
+  border-bottom: 2.5px solid var(--color-galata-navy);
+}
+
+.masthead-brand {
+  display: flex;
+  align-items: center;
+  gap: 4mm;
+}
+
+.masthead-rotary-logo {
+  height: 14mm;
+  width: auto;
+  display: block;
+}
+
+.masthead-club-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.masthead-club-name {
+  font-size: 16pt;
+  font-weight: 800;
+  color: var(--color-galata-navy);
+  line-height: 1.1;
+  letter-spacing: -0.3px;
+}
+
+.masthead-district-badge {
+  font-size: 8pt;
+  font-weight: 700;
+  color: var(--color-rotary-blue);
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  margin-top: 1mm;
+}
+
+.masthead-theme-logo {
+  height: 16mm;
+  width: auto;
+  display: block;
+}
+
+/* Cover Issue Ribbon */
+.cover-issue-ribbon {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--color-galata-navy);
+  color: #FFFFFF;
+  padding: 3mm 5mm;
+  margin: 3mm 0;
+  border-radius: 4px;
+  border-left: 5px solid var(--color-rotary-gold);
+}
+
+.ribbon-month-year {
+  font-size: 13pt;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: var(--color-rotary-gold);
+}
+
+.ribbon-issue-badge {
+  background: rgba(255, 255, 255, 0.15);
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 9pt;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.ribbon-theme-tag {
+  font-size: 8pt;
+  font-weight: 600;
+  color: #E2E8F0;
+  text-transform: uppercase;
+}
+
+/* Navy Künye Box */
+.kunye-box {
+  background: linear-gradient(145deg, #0B2545 0%, #081B33 100%);
+  color: #FFFFFF;
+  padding: 4mm 5mm;
+  border-radius: 6px;
+  border: 1px solid rgba(247, 168, 27, 0.35);
+  box-shadow: 0 4px 12px rgba(11, 37, 69, 0.25);
+  margin-bottom: 3mm;
+}
+
+.kunye-title {
+  font-size: 9pt;
+  font-weight: 800;
+  color: var(--color-rotary-gold);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding-bottom: 2mm;
+  border-bottom: 1px solid rgba(247, 168, 27, 0.3);
+  margin-bottom: 3mm;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.kunye-officers-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2.5mm 4mm;
+  font-size: 7.5pt;
+  line-height: 1.35;
+}
+
+.kunye-officer-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.officer-role {
+  color: var(--color-rotary-gold);
+  font-size: 6.5pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.officer-name {
+  color: #FFFFFF;
+  font-weight: 700;
+  font-size: 7.5pt;
+}
+
+.kunye-club-meta {
+  margin-top: 3mm;
+  padding-top: 2.5mm;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 3mm;
+  font-size: 7pt;
+  color: #CBD5E1;
+}
+
+.kunye-meeting-line {
+  font-weight: 600;
+  color: #FAF8F3;
+}
+
+/* 7 Priority Focus Areas & Four-Way Test Container */
+.cover-ideals-container {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 4mm;
+  margin-bottom: 2mm;
+}
+
+.focus-areas-card {
+  background: #FFFFFF;
+  border: 1px solid var(--color-border-subtle);
+  border-top: 3px solid var(--color-rotary-blue);
+  border-radius: 5px;
+  padding: 3mm 4mm;
+}
+
+.focus-areas-title {
+  font-size: 8pt;
+  font-weight: 800;
+  color: var(--color-galata-navy);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 2mm;
+  display: flex;
+  align-items: center;
+  gap: 2mm;
+}
+
+.focus-areas-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5mm 3mm;
+  font-size: 6.8pt;
+  color: var(--color-text-main);
+}
+
+.focus-area-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.5mm;
+  line-height: 1.25;
+}
+
+.focus-area-num {
+  background: var(--color-rotary-blue);
+  color: #FFFFFF;
+  font-weight: 800;
+  font-size: 6pt;
+  width: 3.5mm;
+  height: 3.5mm;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 0.2mm;
+}
+
+/* The Four-Way Test (Dörtlü Özdenetim) */
+.four-way-test-card {
+  background: #FFFFFF;
+  border: 1px solid var(--color-border-subtle);
+  border-top: 3px solid var(--color-rotary-gold);
+  border-radius: 5px;
+  padding: 3mm 4mm;
+  display: flex;
+  flex-direction: column;
+}
+
+.four-way-title {
+  font-size: 8pt;
+  font-weight: 800;
+  color: var(--color-galata-navy);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 1.5mm;
+}
+
+.four-way-preamble {
+  font-size: 6.5pt;
+  font-style: italic;
+  color: var(--color-text-muted);
+  margin-bottom: 2mm;
+  line-height: 1.2;
+}
+
+.four-way-list {
+  list-style: none;
+  font-size: 6.8pt;
+  line-height: 1.35;
+  color: var(--color-text-main);
+  font-weight: 600;
+}
+
+.four-way-item {
+  margin-bottom: 1mm;
+  display: flex;
+  gap: 1.5mm;
+}
+
+.four-way-num {
+  color: var(--color-rotary-gold);
+  font-weight: 800;
+}
+
+/* Galata Silhouette Footer Vector */
+.cover-silhouette-wrap {
+  width: 100%;
+  height: 18mm;
+  overflow: hidden;
+  margin-top: auto;
+  border-top: 1px solid var(--color-border-subtle);
+  padding-top: 1mm;
+}
+
+.cover-silhouette-svg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* -------------------------------------------------------------
+ * 4. Page 2: President's Message & 12-Month Calendar
+ * ------------------------------------------------------------- */
+.president-page-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 6mm;
+  flex: 1;
+  min-height: 0;
+}
+
+/* President Message Column (2/3) */
+.president-message-col {
+  display: flex;
+  flex-direction: column;
+  background: #FFFFFF;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 6px;
+  padding: 5mm 6mm;
+  box-shadow: 0 2px 8px rgba(11, 37, 69, 0.05);
+}
+
+.president-col-header {
+  border-bottom: 2px solid var(--color-rotary-gold);
+  padding-bottom: 2mm;
+  margin-bottom: 3.5mm;
+}
+
+.president-col-tag {
+  font-size: 7pt;
+  font-weight: 800;
+  color: var(--color-rotary-blue);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.president-message-title {
+  font-size: 13pt;
+  font-weight: 800;
+  color: var(--color-galata-navy);
+  line-height: 1.25;
+  margin-top: 1mm;
+}
+
+.president-portrait-wrap {
+  display: flex;
+  gap: 4mm;
+  align-items: center;
+  background: var(--color-paper-ivory);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 5px;
+  padding: 2.5mm;
+  margin-bottom: 3.5mm;
+}
+
+.president-portrait-img {
+  width: 26mm;
+  height: 32mm;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 2px solid var(--color-galata-navy);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+  flex-shrink: 0;
+}
+
+.president-portrait-meta {
+  display: flex;
+  flex-direction: column;
+}
+
+.president-name-bold {
+  font-size: 10pt;
+  font-weight: 800;
+  color: var(--color-galata-navy);
+}
+
+.president-title-sub {
+  font-size: 7.5pt;
+  font-weight: 700;
+  color: var(--color-rotary-blue);
+  margin-top: 0.5mm;
+}
+
+.president-quote-badge {
+  font-size: 7pt;
+  color: var(--color-text-muted);
+  font-style: italic;
+  margin-top: 1.5mm;
+  line-height: 1.3;
+}
+
+.president-body-text {
+  font-size: 8.2pt;
+  line-height: 1.5;
+  color: var(--color-text-main);
+  text-align: justify;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2.5mm;
+}
+
+.president-body-text p:first-of-type::first-letter {
+  font-size: 20pt;
+  font-weight: 800;
+  color: var(--color-galata-navy);
+  float: left;
+  line-height: 0.9;
+  padding-right: 2mm;
+  padding-top: 1mm;
+}
+
+.president-signature-block {
+  margin-top: auto;
+  padding-top: 3mm;
+  border-top: 1px dashed var(--color-border-subtle);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.president-sig-name {
+  font-size: 9.5pt;
+  font-weight: 800;
+  color: var(--color-galata-navy);
+}
+
+.president-sig-role {
+  font-size: 7pt;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+/* 12-Month Calendar Column (1/3) */
+.calendar-col {
+  display: flex;
+  flex-direction: column;
+  background: #FFFFFF;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 6px;
+  padding: 4mm;
+  box-shadow: 0 2px 8px rgba(11, 37, 69, 0.05);
+}
+
+.calendar-header {
+  border-bottom: 2px solid var(--color-rotary-blue);
+  padding-bottom: 2mm;
+  margin-bottom: 2.5mm;
+  text-align: center;
+}
+
+.calendar-title-main {
+  font-size: 7.5pt;
+  font-weight: 800;
+  color: var(--color-galata-navy);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.calendar-year-sub {
+  font-size: 6.5pt;
+  font-weight: 700;
+  color: var(--color-rotary-gold);
+  letter-spacing: 0.8px;
+}
+
+.calendar-months-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.3mm;
+  flex: 1;
+  justify-content: space-between;
+}
+
+.calendar-month-item {
+  display: flex;
+  flex-direction: column;
+  padding: 1.3mm 2.2mm;
+  border-radius: 3px;
+  border: 1px solid #EDF2F7;
+  background: var(--color-paper-ivory);
+  font-size: 6.8pt;
+  line-height: 1.25;
+  transition: all 0.2s ease;
+}
+
+.calendar-month-item .month-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.calendar-month-name {
+  font-weight: 700;
+  color: var(--color-galata-navy);
+}
+
+.calendar-month-theme-text {
+  font-size: 6.2pt;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 0.3mm;
+}
+
+/* Active Month Rule: Strict Gold Border (#F7A81B) */
+.calendar-month-item.active-month {
+  border: 2px solid #F7A81B !important;
+  background: #FFF9E6 !important;
+  box-shadow: 0 2px 6px rgba(247, 168, 27, 0.28);
+}
+
+.calendar-month-item.active-month .calendar-month-name {
+  color: #B45309 !important;
+  font-weight: 800;
+  font-size: 7.2pt;
+}
+
+.calendar-month-item.active-month .calendar-month-theme-text {
+  color: var(--color-galata-navy) !important;
+  font-weight: 700;
+}
+
+.active-badge-tag {
+  background: #F7A81B;
+  color: #0B2545;
+  font-size: 5.5pt;
+  font-weight: 800;
+  padding: 0.5px 4px;
+  border-radius: 6px;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+/* -------------------------------------------------------------
+ * 5. Articles, News & Bento Grid Layouts
+ * ------------------------------------------------------------- */
+.article-page-layout {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 4mm;
+  min-height: 0;
+}
+
+.article-card {
+  background: #FFFFFF;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 6px;
+  padding: 4.5mm 5.5mm;
+  box-shadow: 0 2px 8px rgba(11, 37, 69, 0.05);
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.article-card.compact {
+  flex: 1;
+  padding: 3.5mm 4.5mm;
+}
+
+.article-meta-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2mm;
+  flex-wrap: wrap;
+  gap: 2mm;
+}
+
+.article-category-badge {
+  background: var(--color-rotary-blue);
+  color: #FFFFFF;
+  font-size: 6.8pt;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 1.5px 7px;
+  border-radius: 3px;
+}
+
+.article-category-badge.engelsiz {
+  background: #0D9488;
+}
+
+.article-category-badge.sosyal {
+  background: #7C3AED;
+}
+
+.article-category-badge.imza {
+  background: var(--color-rotary-gold);
+  color: var(--color-galata-navy);
+}
+
+.article-category-badge.vefa {
+  background: #475569;
+}
+
+.article-date-venue {
+  font-size: 7pt;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  gap: 3mm;
+}
+
+.article-title {
+  font-size: 12pt;
+  font-weight: 800;
+  color: var(--color-galata-navy);
+  line-height: 1.25;
+  margin-bottom: 2.5mm;
+}
+
+.article-summary {
+  font-size: 8.5pt;
+  line-height: 1.48;
+  color: var(--color-text-main);
+  text-align: justify;
+  margin-bottom: 3.5mm;
+}
+
+/* Bento Grid System */
+.bento-container {
+  flex: 1;
+  min-height: 0;
+  margin-top: auto;
+}
+
+/* Layout 1: single-col */
+.single-col {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 85mm;
+}
+
+.single-col .bento-photo-card {
+  width: 100%;
+  height: 100%;
+}
+
+/* Layout 2: two-col */
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3mm;
+  width: 100%;
+  height: 80mm;
+}
+
+/* Layout 3: bento-3 (1 featured + 2 stacked) */
+.bento-3 {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 3mm;
+  width: 100%;
+  height: 85mm;
+}
+
+.bento-3 .bento-photo-card:first-child {
+  grid-row: span 2;
+}
+
+/* Layout 4: bento-4 (2x2 grid) */
+.bento-4 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 3mm;
+  width: 100%;
+  height: 85mm;
+}
+
+/* Photo Card & Caption */
+.bento-photo-card {
+  position: relative;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #E2E8F0;
+  border: 1px solid var(--color-border-subtle);
+  display: flex;
+  flex-direction: column;
+}
+
+.bento-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  flex: 1;
+}
+
+.bento-caption {
+  background: rgba(11, 37, 69, 0.88);
+  color: #FFFFFF;
+  font-size: 6.2pt;
+  font-weight: 600;
+  padding: 1.2mm 2.5mm;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  backdrop-filter: blur(2px);
+}
+
+/* -------------------------------------------------------------
+ * 6. Culture Section & Regional Announcements
+ * ------------------------------------------------------------- */
+.culture-page-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 4mm;
+  flex: 1;
+  min-height: 0;
+}
+
+.culture-book-card {
+  background: #FFFFFF;
+  border: 1px solid var(--color-border-subtle);
+  border-top: 3px solid var(--color-rotary-gold);
+  border-radius: 6px;
+  padding: 5mm;
+  display: grid;
+  grid-template-columns: 32mm 1fr;
+  gap: 5mm;
+  box-shadow: 0 2px 8px rgba(11, 37, 69, 0.05);
+}
+
+.book-cover-img {
+  width: 32mm;
+  height: 46mm;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1.5px solid var(--color-galata-navy);
+  box-shadow: 0 3px 8px rgba(0,0,0,0.18);
+}
+
+.book-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.book-tag {
+  font-size: 7pt;
+  font-weight: 800;
+  color: var(--color-rotary-blue);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.book-title {
+  font-size: 11pt;
+  font-weight: 800;
+  color: var(--color-galata-navy);
+  margin: 1mm 0;
+}
+
+.book-author {
+  font-size: 8pt;
+  font-weight: 700;
+  color: var(--color-rotary-gold);
+  margin-bottom: 2mm;
+}
+
+.book-summary {
+  font-size: 7.8pt;
+  line-height: 1.45;
+  color: var(--color-text-main);
+  text-align: justify;
+}
+
+.announcements-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3.5mm;
+  flex: 1;
+}
+
+.announcement-box {
+  background: #FFFFFF;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 5px;
+  padding: 3.5mm;
+  display: flex;
+  flex-direction: column;
+}
+
+.announcement-box-title {
+  font-size: 8pt;
+  font-weight: 800;
+  color: var(--color-galata-navy);
+  text-transform: uppercase;
+  border-bottom: 1.5px solid var(--color-rotary-blue);
+  padding-bottom: 1.5mm;
+  margin-bottom: 2mm;
+}
+
+.announcement-box-content {
+  font-size: 7.3pt;
+  line-height: 1.4;
+  color: var(--color-text-main);
+}
+
+/* -------------------------------------------------------------
+ * 7. Final Page: Full-Page Polio Back Cover (#E01E26)
+ * ------------------------------------------------------------- */
+.page-backcover {
+  width: 210mm;
+  height: 297mm;
+  max-height: 297mm;
+  background: #E01E26 !important;
+  color: #FFFFFF !important;
+  padding: 18mm 16mm 16mm 16mm;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+@media print {
+  .page-backcover {
+    background: #E01E26 !important;
+    color: #FFFFFF !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
+.backcover-top-header {
+  font-size: 8.5pt;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #FFFFFF;
+  border-bottom: 1.5px solid rgba(255, 255, 255, 0.35);
+  padding-bottom: 2.5mm;
+  width: 100%;
+}
+
+.backcover-center-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6mm;
+  max-width: 165mm;
+}
+
+.backcover-emblem-svg {
+  width: 48mm;
+  height: 48mm;
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.25));
+}
+
+.backcover-main-title {
+  font-size: 32pt;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #FFFFFF;
+  line-height: 1.1;
+  text-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+}
+
+.backcover-sub-title {
+  font-size: 14pt;
+  font-weight: 800;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--color-rotary-gold);
+  margin-top: -3mm;
+}
+
+.backcover-manifesto {
+  font-size: 10.5pt;
+  line-height: 1.6;
+  font-weight: 500;
+  color: #FEE2E2;
+  text-align: center;
+  margin-top: 3mm;
+  max-width: 140mm;
+}
+
+.backcover-footer {
+  width: 100%;
+  border-top: 1.5px solid rgba(255, 255, 255, 0.35);
+  padding-top: 5mm;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2.5mm;
+}
+
+.backcover-contact-row {
+  display: flex;
+  justify-content: center;
+  gap: 8mm;
+  font-size: 9.5pt;
+  font-weight: 700;
+}
+
+.backcover-contact-item {
+  display: flex;
+  align-items: center;
+  gap: 2mm;
+  color: #FFFFFF;
+  text-decoration: none;
+}
+
+.backcover-club-meta {
+  font-size: 7.5pt;
+  color: rgba(255, 255, 255, 0.85);
+  letter-spacing: 0.5px;
+}
+
+.backcover-theme-motto {
+  font-size: 9pt;
+  font-weight: 800;
+  color: var(--color-rotary-gold);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}

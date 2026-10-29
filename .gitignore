@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Agent & Teamwork Metadata
+.agents/
+
+# Temporary and Scratch Files
+temp/
+tmp/
+*.log
+*.tmp
+.vercel
+
+# Compressed Archives
+*.zip
+*.tar
+*.gz
+*.rar
+
+# OS Generated Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE / Editor configuration
+.vscode/
+.idea/

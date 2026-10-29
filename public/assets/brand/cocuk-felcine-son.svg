@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="600" height="600">
+  <defs>
+    <style>
+      .crimson-bg { fill: #E01E26; }
+      .white-text { fill: #FFFFFF; font-family: 'Montserrat', 'Arial Black', sans-serif; font-weight: 900; }
+      .gold-text { fill: #F7A81B; font-family: 'Open Sans', Arial, sans-serif; font-weight: 800; }
+      .sub-text { fill: #FFFFFF; font-family: 'Open Sans', Arial, sans-serif; font-weight: 700; }
+    </style>
+    <filter id="polio-shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000000" flood-opacity="0.35" />
+    </filter>
+  </defs>
+
+  <!-- Polio Vaccine Drop / Globe Silhouette -->
+  <g id="vaccine-drop-icon" transform="translate(300, 190)" filter="url(#polio-shadow)">
+    <!-- Iconic Drop Shape -->
+    <path d="M 0,-110 C 35,-60 85,-10 85,45 C 85,95 47,135 0,135 C -47,135 -85,95 -85,45 C -85,-10 -35,-60 0,-110 Z" fill="#FFFFFF" />
+    
+    <!-- Inner Crimson Drop -->
+    <path d="M 0,-85 C 26,-45 65,-8 65,35 C 65,75 36,108 0,108 C -36,108 -65,75 -65,35 C -65,-8 -26,-45 0,-85 Z" fill="#E01E26" />
+    
+    <!-- Rotary Wheel Inside Drop (Gold & White) -->
+    <g transform="translate(0, 35) scale(0.48)">
+      <circle r="60" fill="#F7A81B" stroke="#FFFFFF" stroke-width="4" />
+      <!-- Cogs -->
+      <g fill="#F7A81B">
+        <rect x="-6" y="-68" width="12" height="10" />
+        <rect x="-6" y="-68" width="12" height="10" transform="rotate(30)" />
+        <rect x="-6" y="-68" width="12" height="10" transform="rotate(60)" />
+        <rect x="-6" y="-68" width="12" height="10" transform="rotate(90)" />
+        <rect x="-6" y="-68" width="12" height="10" transform="rotate(120)" />
+        <rect x="-6" y="-68" width="12" height="10" transform="rotate(150)" />
+        <rect x="-6" y="-68" width="12" height="10" transform="rotate(180)" />
+        <rect x="-6" y="-68" width="12" height="10" transform="rotate(210)" />
+        <rect x="-6" y="-68" width="12" height="10" transform="rotate(240)" />
+        <rect x="-6" y="-68" width="12" height="10" transform="rotate(270)" />
+        <rect x="-6" y="-68" width="12" height="10" transform="rotate(300)" />
+        <rect x="-6" y="-68" width="12" height="10" transform="rotate(330)" />
+      </g>
+      <!-- Cutouts -->
+      <circle cx="0" cy="-28" r="9" fill="#E01E26" />
+      <circle cx="24" cy="-14" r="9" fill="#E01E26" />
+      <circle cx="24" cy="14" r="9" fill="#E01E26" />
+      <circle cx="0" cy="28" r="9" fill="#E01E26" />
+      <circle cx="-24" cy="14" r="9" fill="#E01E26" />
+      <circle cx="-24" cy="-14" r="9" fill="#E01E26" />
+      <circle r="15" fill="#F7A81B" stroke="#FFFFFF" stroke-width="2" />
+      <circle r="6" fill="#FFFFFF" />
+    </g>
+  </g>
+
+  <!-- Primary Turkish Title -->
+  <g id="title-tr" transform="translate(300, 395)">
+    <text x="0" y="0" class="white-text" font-size="44" text-anchor="middle" letter-spacing="3">ÇOCUK FELCİNE</text>
+    <text x="0" y="56" class="white-text" font-size="64" text-anchor="middle" letter-spacing="6">SON</text>
+  </g>
+
+  <!-- Accent Divider -->
+  <line x1="160" y1="480" x2="440" y2="480" stroke="#F7A81B" stroke-width="4" stroke-linecap="round" />
+
+  <!-- International Subtitle: END POLIO NOW -->
+  <g id="title-en" transform="translate(300, 520)">
+    <text x="0" y="0" class="gold-text" font-size="28" text-anchor="middle" letter-spacing="6">END POLIO NOW</text>
+    <text x="0" y="28" class="sub-text" font-size="14" text-anchor="middle" letter-spacing="3" opacity="0.9">ROTARY ULUSLARARASI POLIO KAMPANYASI</text>
+  </g>
+</svg>

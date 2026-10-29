@@ -1,0 +1,123 @@
+{
+  "id": "2026-07-temmuz",
+  "issueNumber": 1,
+  "rotaryYear": "2026-2027",
+  "month": "Temmuz",
+  "year": 2026,
+  "theme": "KALICI ETKİ YARAT",
+  "rotaryMonthTheme": "Anne ve Çocuk Sağlığı Ayı",
+  "club": {
+    "name": "Galata Rotary Kulübü",
+    "district": "UR 2420. Bölge",
+    "clubNo": "64336",
+    "charterDate": "27.01.2004",
+    "foundationDate": "02.09.2003",
+    "meeting": "Her Pazartesi 19:30 | Grand Hyatt İstanbul Taksim & Zoom"
+  },
+  "officers": {
+    "riPresident": "Olayinka Hakeem Babalola",
+    "districtGovernor": "Erden Gökmen",
+    "assistantGovernor": "Yeşim Guvernör",
+    "president": "Sevilay Aksel",
+    "secretary": "Gökhan Alpertunga",
+    "treasurer": "Burhan Tokgöz",
+    "bulletinCommittee": [
+      "Rifat Akın Kaplan",
+      "Özgür Kuddar",
+      "GDB Polat Özcan"
+    ]
+  },
+  "presidentMessage": {
+    "title": "Yeni Döneme Merhaba: Kalıcı Etki Yaratmak İçin Yola Çıkıyoruz",
+    "body": "Değerli Rotaryen Dostlarım ve Sevgili Galata Ailemiz,\n\n2026–2027 Rotary Dönemine, Uluslararası Rotary Başkanımız Sayın Olayinka Hakeem Babalola'nın 'Kalıcı Etki Yarat' (Create Lasting Impact) mottosu ve 2420. Bölge Guvernörümüz Sayın Erden Gökmen'in vizyoner liderliğinde büyük bir coşku, inanç ve hizmet heyecanıyla başlıyoruz.\n\nTemmuz ayı, Rotary takviminde 'Anne ve Çocuk Sağlığı Ayı' olarak belirlenmiştir. Toplumların sürdürülebilir geleceği; annelerin güçlenmesi, çocukların sağlıklı ve güvenli koşullarda büyümesiyle mümkündür. Galata Rotary Kulübü olarak bu dönemde de yalnızca günü kurtaran değil, nesiller boyu yankı bulacak kalıcı projeler geliştirmeyi hedefliyoruz.\n\nDönemimizin ilk toplantısında bir araya gelerek komitelerimizin çalışma takvimini netleştirdik; eğitimden sağlığa, gençlik değişiminden kültür sanat buluşmalarına uzanan kapsamlı bir faaliyet haritası çizdik. Bursiyerimiz Şengül'ün mezuniyet mektubunda dile getirdiği samimi teşekkür, hepimize hizmet yolunda ne denli kıymetli bir iz bıraktığımızı bir kez daha hatırlattı.\n\nBirbirimize olan dostluğumuz, ortak değerlerimiz ve topluma hizmet tutkumuzla bu dönemi hafızalarda kalıcı kılacağımıza yürekten inanıyorum. Hepimize başarılı, üretken ve sağlık dolu bir dönem diliyorum.\n\nSevgi ve Rotaryen Saygılarımla,",
+    "photo": "assets/photos/2026-07/baskan_sevilay_aksel.jpg"
+  },
+  "articles": [
+    {
+      "id": "art-01",
+      "category": "Kulüp Toplantısı",
+      "date": "6 Temmuz 2026",
+      "title": "Dönemimizin 1., Kulübümüzün 1008. Toplantısı Gerçekleştirildi",
+      "venue": "Grand Hyatt İstanbul Taksim",
+      "summary": "2026–2027 Hizmet Dönemimizin açılış toplantısı, Kulübümüzün 1008. toplantısı olarak coşkulu bir katılımla gerçekleştirildi. Dönem Başkanı Sevilay Aksel'in başkanlığında toplanan kulübümüz; komite görev dağılımlarını onayladı, Watertown Rotary Kulübü ile ikiz kulüp temaslarını başlattı ve GalatArt sergisi ile kermes hazırlıklarını ele aldı.",
+      "layout": "two-col",
+      "photos": [
+        {
+          "url": "assets/photos/2026-07/00004876.jpg",
+          "caption": "1008. Toplantı Resmî Gündem Belgesi ve Komite Planı"
+        }
+      ]
+    },
+    {
+      "id": "art-02",
+      "category": "Eğitim ve Gençlik",
+      "date": "1 Temmuz 2026",
+      "title": "Bursiyerimizin Mezuniyet Gururu ve Köy Okullarına Kitap Çağrısı",
+      "venue": "İstanbul",
+      "summary": "Kulübümüzün üniversite eğitim bursuyla desteklediği bursiyerimiz Şengül, tıp fakültesinden başarıyla mezun olarak gururumuz oldu. Mezuniyet mektubunda kulübümüze teşekkürlerini sunan Şengül'ün başarısı vesilesiyle, Koç Gönüllüleri Köy Okulları Kitap Paylaşım Projesi'ne destek kampanyası başlatıldı.",
+      "layout": "single-col",
+      "photos": [
+        {
+          "url": "assets/photos/2026-07/00004896.jpg",
+          "caption": "Anne ve Çocuk Sağlığı Komite Koordinasyonu"
+        }
+      ]
+    },
+    {
+      "id": "art-03",
+      "category": "Gençlik Değişimi",
+      "date": "11 Temmuz 2026",
+      "title": "Uluslararası Gençlik Değişimi: Çek Cumhuriyeti Dostumuzu Ağırladık",
+      "venue": "İstanbul",
+      "summary": "Rotary Kısa Dönem Gençlik Değişimi Programı kapsamında Çek Cumhuriyeti'nden gelen değişim öğrencimiz İstanbul'da kulüp üyelerimiz tarafından misafir edildi. Güler Çimşir dostumuzun rehberliğinde Tarihi Yarımada, Galata Kulesi ve Boğaz turu yapılarak kültürlerarası köprüler kuruldu.",
+      "layout": "two-col",
+      "photos": [
+        {
+          "url": "assets/photos/2026-07/00004889.jpg",
+          "caption": "Gençlik Değişimi Öğrencimizin Galata Ziyareti"
+        },
+        {
+          "url": "assets/photos/2026-07/00004890.jpg",
+          "caption": "Kültürlerarası Dostluk Paylaşımı"
+        }
+      ]
+    },
+    {
+      "id": "art-04",
+      "category": "Galata Sosyal",
+      "date": "31 Temmuz 2026",
+      "title": "Harbiye Cemil Topuzlu Açıkhava Tiyatrosu Sıla Konseri Buluşması",
+      "venue": "Harbiye Açıkhava Tiyatrosu",
+      "summary": "Sosyal Komite Sorumlumuz Nilüfer Oldan'ın koordinasyonunda düzenlenen temmuz ayı sosyal etkinliğimizde, üyelerimiz ve eşleri Harbiye Cemil Topuzlu Açıkhava Tiyatrosu'nda Sıla konserinde bir araya gelerek dostluk bağlarımızı güçlendirdi.",
+      "layout": "two-col",
+      "photos": [
+        {
+          "url": "assets/photos/2026-07/00004919.jpg",
+          "caption": "Galata Rotary Ailesi Yaz Akşamı Buluşması"
+        },
+        {
+          "url": "assets/photos/2026-07/00004967.jpg",
+          "caption": "Kültür Sanat Paylaşımı"
+        }
+      ]
+    }
+  ],
+  "culture": {
+    "title": "Galata Kültür Köşesi",
+    "book": {
+      "title": "Galata Köprüsü: Sıradışı Bir Tarihi Yolculuk",
+      "author": "İlhan Eksen",
+      "cover": "assets/photos/2026-07/kitap_galata_koprusu.jpg",
+      "summary": "İlhan Eksen'in kaleminden Haliç'in iki yakasını birbirine bağlayan sadece bir köprü değil, İstanbul'un toplumsal, kültürel ve ekonomik belleğinin merkez üssü olan Galata Köprüsü'nün asırlık hikâyesi. Köprü üstü hayatı, balıkçıları, vapurları ve Galata ile Eminönü arasındaki ebedi diyaloğu inceliyor."
+    }
+  },
+  "backCover": {
+    "theme": "ÇOCUK FELCİNE SON",
+    "subTheme": "End Polio Now",
+    "color": "#E01E26",
+    "contact": {
+      "instagram": "@galatarotarykulubu",
+      "web": "www.galatarotary.org"
+    }
+  }
+}

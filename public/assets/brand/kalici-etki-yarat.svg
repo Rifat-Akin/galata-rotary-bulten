@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="500" height="500">
+  <defs>
+    <radialGradient id="bg-grad" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#0080D0" />
+      <stop offset="60%" stop-color="#006CB7" />
+      <stop offset="100%" stop-color="#004A80" />
+    </radialGradient>
+    <linearGradient id="gold-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFD15C" />
+      <stop offset="50%" stop-color="#F7A81B" />
+      <stop offset="100%" stop-color="#D98A00" />
+    </linearGradient>
+    <linearGradient id="wave-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00C4FF" stop-opacity="0.8" />
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.9" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.3" />
+    </filter>
+  </defs>
+
+  <!-- Circular Outer Badge Background -->
+  <circle cx="250" cy="250" r="235" fill="url(#bg-grad)" filter="url(#shadow)" stroke="#FFFFFF" stroke-width="6" />
+
+  <!-- Inner Concentric Orbit Rings (Ripples of Lasting Impact) -->
+  <circle cx="250" cy="220" r="175" fill="none" stroke="#FFFFFF" stroke-width="1.5" stroke-opacity="0.25" stroke-dasharray="6,4" />
+  <circle cx="250" cy="220" r="145" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-opacity="0.35" />
+  <circle cx="250" cy="220" r="115" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-opacity="0.45" />
+
+  <!-- Expanding Dynamic Impact Waves (Vector Motif) -->
+  <g id="impact-arcs" transform="translate(250, 220)">
+    <path d="M-80,-60 Q0,-120 80,-60 Q0,-90 -80,-60 Z" fill="url(#wave-grad)" opacity="0.9" />
+    <path d="M-110,-30 Q0,-130 110,-30 Q0,-80 -110,-30 Z" fill="url(#gold-grad)" opacity="0.85" />
+    <path d="M-135,10 Q0,-120 135,10 Q0,-60 -135,10 Z" fill="#FFFFFF" opacity="0.8" />
+  </g>
+
+  <!-- Central Emblem: Mini Rotary Gold Wheel of Impact -->
+  <g id="mini-wheel" transform="translate(250, 220) scale(0.6)">
+    <circle r="44" fill="url(#gold-grad)" stroke="#FFFFFF" stroke-width="3" />
+    <!-- 6 Cutout Holes -->
+    <circle cx="0" cy="-22" r="7" fill="#006CB7" />
+    <circle cx="19" cy="-11" r="7" fill="#006CB7" />
+    <circle cx="19" cy="11" r="7" fill="#006CB7" />
+    <circle cx="0" cy="22" r="7" fill="#006CB7" />
+    <circle cx="-19" cy="11" r="7" fill="#006CB7" />
+    <circle cx="-19" cy="-11" r="7" fill="#006CB7" />
+    <!-- Hub -->
+    <circle r="12" fill="url(#gold-grad)" stroke="#004A80" stroke-width="2" />
+    <circle r="5" fill="#FFFFFF" />
+  </g>
+
+  <!-- Corporate Header Arc / Year Badge -->
+  <path id="curve-year" d="M 120 105 A 175 175 0 0 1 380 105" fill="none" />
+  <text font-family="'Open Sans', 'Frutiger', Arial, sans-serif" font-weight="800" font-size="19" fill="#FFD15C" letter-spacing="4" text-anchor="middle">
+    <textPath href="#curve-year" startOffset="50%">2026–2027 ROTARY</textPath>
+  </text>
+
+  <!-- Primary Theme Title: KALICI ETKİ YARAT -->
+  <g id="theme-text" transform="translate(250, 360)">
+    <!-- White Shadow / Outline for Extreme Contrast -->
+    <text x="0" y="-30" font-family="'Montserrat', 'Arial Black', sans-serif" font-weight="900" font-size="34" fill="#FFFFFF" text-anchor="middle" letter-spacing="3">KALICI ETKİ</text>
+    <text x="0" y="16" font-family="'Montserrat', 'Arial Black', sans-serif" font-weight="900" font-size="46" fill="#FFD15C" text-anchor="middle" letter-spacing="4">YARAT</text>
+    
+    <!-- English Subtitle: CREATE LASTING IMPACT -->
+    <rect x="-140" y="34" width="280" height="2" fill="#FFFFFF" opacity="0.6" />
+    <text x="0" y="52" font-family="'Open Sans', Arial, sans-serif" font-weight="700" font-size="13" fill="#FFFFFF" text-anchor="middle" letter-spacing="4" opacity="0.95">CREATE LASTING IMPACT</text>
+  </g>
+</svg>

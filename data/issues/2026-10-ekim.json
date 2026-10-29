@@ -1,0 +1,181 @@
+{
+  "id": "2026-10-ekim",
+  "issueNumber": 4,
+  "rotaryYear": "2026-2027",
+  "month": "Ekim",
+  "year": 2026,
+  "theme": "KALICI ETKİ YARAT",
+  "rotaryMonthTheme": "Toplumsal ve Ekonomik Kalkınma Ayı & Çocuk Felciyle Mücadele",
+  "club": {
+    "name": "Galata Rotary Kulübü",
+    "district": "UR 2420. Bölge",
+    "clubNo": "64336",
+    "charterDate": "27.01.2004",
+    "foundationDate": "02.09.2003",
+    "meeting": "Her Pazartesi 19:30 | Grand Hyatt İstanbul Taksim & Zoom"
+  },
+  "officers": {
+    "riPresident": "Olayinka Hakeem Babalola",
+    "districtGovernor": "Erden Gökmen",
+    "assistantGovernor": "İhsan Ercan",
+    "president": "Sevilay Aksel",
+    "secretary": "Gökhan Alpertunga",
+    "treasurer": "Burhan Tokgöz",
+    "bulletinCommittee": [
+      "Rifat Akın Kaplan",
+      "Özgür Kuddar",
+      "GDB Polat Özcan"
+    ]
+  },
+  "presidentMessage": {
+    "title": "Cumhuriyetimizin Işığında Liderlik ve Toplumsal Dayanışma",
+    "body": "Değerli Rotaryen Dostlarım ve Sevgili Galata Ailemiz,\n\nEkim ayı, tarihimizin en büyük gurur kaynağı olan Türkiye Cumhuriyeti'nin 103. kuruluş yıldönümünü kutladığımız; aynı zamanda Rotary'de 'Toplumsal ve Ekonomik Kalkınma' ile '24 Ekim Dünya Çocuk Felci Günü' hedeflerine kenetlendiğimiz son derece bereketli ve gurur dolu bir ay oldu.\n\nUlu Önderimiz Gazi Mustafa Kemal Atatürk'ün 'Ey yükselen yeni nesil, istikbal sizindir!' sözünden aldığımız ilhamla, 10 Ekim'de Galata Derneği ev sahipliğinde gerçekleştirdiğimiz 'RYLA Eğiticinin Eğitimi Semineri' kulübümüzün imza projelerinden biri olarak tarihe geçti. 38 pırıl pırıl gencimize liderlik, etkili iletişim ve proje yönetimi becerileri kazandırırken, geleceğin liderlerini yetiştirmenin gururunu yaşadık.\n\nEkim ayında gerçekleştirdiğimiz 2. Kulüp Asamble'mizde aldığımız kararla, üniversite bursiyerlerimizin aylık burs tutarını 4.000 TL'ye yükselttik. Gençlerimizin ekonomik güvence içinde eğitimlerini sürdürmesi bizim en büyük önceliğimizdir. Bunun yanı sıra ihtiyaç sahiplerine ulaştırdığımız tekerlekli sandalye ve Artvin Macahel'deki 46 ilkokul öğrencimize ulaştırdığımız kışlık mont, bot ve sanat destekleriyle dayanışma köprülerimizi Anadolu'ya uzattık.\n\n26 Ekim akşamı araştırmacı Sibel Usanma'nın 'Atatürk'ün Evleri' konulu sunumuyla Cumhuriyetimizin 103. yılını coşkuyla selamladık. 24 Ekim Dünya Çocuk Felci Günü vesilesiyle de 'Çocuk Felcine Son' hedefimize olan kararlılığımızı bir kez daha tüm dünyaya haykırıyoruz.\n\nCumhuriyetimizin ışığında, kalıcı etkiler yaratmaya devam edeceğiz.\n\nEn İçten Rotaryen Sevgilerimle,",
+    "photo": "assets/photos/2026-10/baskan_sevilay_aksel.jpg"
+  },
+  "articles": [
+    {
+      "id": "art-01",
+      "category": "İmza Proje",
+      "date": "10 Ekim 2026",
+      "title": "RYLA Eğiticinin Eğitimi Semineri: 38 Gence Liderlik Vizyonu",
+      "venue": "Galata Derneği Beyoğlu",
+      "summary": "Kulübümüzün gençlik liderliği alanındaki imza projesi olan 'RYLA Eğiticinin Eğitimi Semineri', Galata Derneği'nde 38 gencimizin yoğun katılımıyla tamamlandı. Rifat Akın Kaplan dostumuzun koordinasyonunda uzman eğitmenlerin verdiği seminer için 12.413 TL bütçe kullanıldı ve Galata Derneği'ne kalıcı malzeme desteği sağlandı.",
+      "layout": "bento-4",
+      "photos": [
+        {
+          "url": "assets/photos/2026-10/00005362.jpg",
+          "caption": "RYLA Eğiticinin Eğitimi Resmî Afişi"
+        },
+        {
+          "url": "assets/photos/2026-10/00005466.jpg",
+          "caption": "38 Genç Katılımcımız ve Liderlik Eğitimi"
+        },
+        {
+          "url": "assets/photos/2026-10/00005470.jpg",
+          "caption": "İnteraktif Atölye Çalışmaları"
+        },
+        {
+          "url": "assets/photos/2026-10/00005543.jpg",
+          "caption": "Sertifika Töreni ve Genç Liderlerimiz"
+        }
+      ]
+    },
+    {
+      "id": "art-02",
+      "category": "Toplumsal Dayanışma",
+      "date": "10–14 Ekim 2026",
+      "title": "Engelsiz Galata & Artvin Macahel Kışlık Eğitime Destek",
+      "venue": "İstanbul & Artvin Macahel",
+      "summary": "Nilüfer Oldan koordinasyonunda ihtiyaç sahibi bir yurttaşımıza tekerlekli sandalye teslimatı gerçekleştirildi. Eş zamanlı olarak Artvin Macahel Vadisi'nde öğrenim gören 46 ilkokul öğrencimize kışlık mont, bot ve resim atölyesi malzemeleri ulaştırılarak eğitimlerine sıcak bir destek sağlandı.",
+      "layout": "two-col",
+      "photos": [
+        {
+          "url": "assets/photos/2026-10/00005488.jpg",
+          "caption": "Tekerlekli Sandalye Teslim Anı"
+        },
+        {
+          "url": "assets/photos/2026-10/00005624.jpg",
+          "caption": "Macahel İlkokulu Öğrencilerimizin Sevinci"
+        }
+      ]
+    },
+    {
+      "id": "art-03",
+      "category": "Galata Sosyal",
+      "date": "11 Ekim 2026",
+      "title": "Sırapınar Konakları Dostluk Buluşması ve Masa Tenisi Turnuvası",
+      "venue": "Sırapınar Konakları",
+      "summary": "Yeliz ve Cenk Laçin dostlarımızın ev sahipliğinde Sırapınar Konakları'nda düzenlenen geleneksel ocakbaşı buluşmasında üyelerimiz bir araya geldi. Gün boyu süren masa tenisi turnuvası ve dostluk sohbetleriyle kulüp içi bağlarımız pekiştirildi.",
+      "layout": "bento-3",
+      "photos": [
+        {
+          "url": "assets/photos/2026-10/00005551.jpg",
+          "caption": "Sırapınar Dostluk Buluşması Açılışı"
+        },
+        {
+          "url": "assets/photos/2026-10/00005580.jpg",
+          "caption": "Masa Tenisi Turnuvası Heyecanı"
+        },
+        {
+          "url": "assets/photos/2026-10/00005610.jpg",
+          "caption": "Galata Ailesi Sırapınar Hatırası"
+        }
+      ]
+    },
+    {
+      "id": "art-04",
+      "category": "Kulüp Asamblesi",
+      "date": "19 Ekim 2026",
+      "title": "2. Kulüp Asamblesi: Üniversite Bursları 4.000 TL'ye Yükseltildi",
+      "venue": "Grand Hyatt İstanbul Taksim",
+      "summary": "Dönemimizin 13. haftalık toplantısı, 2. Kulüp Asamblesi olarak icra edildi. Komite başkanlarımızın ilk 3 aylık faaliyet raporları değerlendirildi. Ekonomik koşullar gözetilerek üniversite bursiyerlerimizin burs miktarı oybirliğiyle aylık 4.000 TL olarak güncellendi.",
+      "layout": "two-col",
+      "photos": [
+        {
+          "url": "assets/photos/2026-10/00005659.jpg",
+          "caption": "2. Kulüp Asamblesi Toplantı Çağrısı"
+        },
+        {
+          "url": "assets/photos/2026-10/00005668.jpg",
+          "caption": "Asamble Açılışı ve Komite Sunumları"
+        }
+      ]
+    },
+    {
+      "id": "art-05",
+      "category": "Cumhuriyet Özel Toplantısı",
+      "date": "26 Ekim 2026",
+      "title": "Cumhuriyetimizin 103. Yılı Toplantısı: Sibel Usanma ile 'Atatürk'ün Evleri'",
+      "venue": "Grand Hyatt İstanbul Taksim",
+      "summary": "Cumhuriyetimizin 103. yılı onuruna gerçekleştirilen özel toplantıda, araştırmacı-yazar Sibel Usanma konuk konuşmacı olarak 'Atatürk'ün Yaşadığı Evler ve Cumhuriyet Mimarisinin Doğuşu' konulu zengin görsel arşivli bir konferans sundu. Gece Türk bayrakları ve marşlarla taçlandı.",
+      "layout": "two-col",
+      "photos": [
+        {
+          "url": "assets/photos/2026-10/00005695.jpg",
+          "caption": "Sibel Usanma ile Cumhuriyet Konferansı Afişi"
+        },
+        {
+          "url": "assets/photos/2026-10/00005650.jpg",
+          "caption": "Sunay Akın ile Kültür ve Sanat Çağrısı"
+        }
+      ]
+    },
+    {
+      "id": "art-06",
+      "category": "Vefa & Polio",
+      "date": "24 Ekim 2026",
+      "title": "24 Ekim Dünya Çocuk Felci Günü Çağrısı & Balat Kültür Gezisi Nostaljisi",
+      "venue": "İstanbul",
+      "summary": "UR 2420. Bölge Guvernörü Erden Gökmen ve Vakıf Komitesi'nin video mesajlarıyla Dünya Çocuk Felci Günü dayanışması büyütüldü. Kulübümüzün geçmiş dönem Balat Kültür Gezisi anıları tazelenerek vefa köprüsü kuruldu.",
+      "layout": "two-col",
+      "photos": [
+        {
+          "url": "assets/photos/2026-10/00005690.jpg",
+          "caption": "Tarihi Balat Gezisi Kültür Nostaljisi"
+        },
+        {
+          "url": "assets/photos/2026-10/00005370.jpg",
+          "caption": "Rotary Gençlik Liderlik Anısı"
+        }
+      ]
+    }
+  ],
+  "culture": {
+    "title": "Galata Kültür Köşesi",
+    "book": {
+      "title": "Galata Hanları (1868–1945)",
+      "author": "Celali Yılmaz",
+      "cover": "assets/photos/2026-10/kitap_galata_hanlari.jpg",
+      "summary": "Galata’nın tarihî hanlarını ticaretin, finansın ve sermaye birikiminin merkezleri olarak inceliyor. 1868–1945 döneminde hanların ekonomik hayattaki rolünü ve Osmanlı’dan Cumhuriyet’e geçişte yaşanan değişimleri ele alıyor."
+    }
+  },
+  "backCover": {
+    "theme": "ÇOCUK FELCİNE SON",
+    "subTheme": "End Polio Now",
+    "color": "#E01E26",
+    "contact": {
+      "instagram": "@galatarotarykulubu",
+      "web": "www.galatarotary.org"
+    }
+  }
+}
