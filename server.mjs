@@ -33,6 +33,79 @@ const DATA_DIR = path.join(PROJECT_ROOT, 'data', 'issues');
 const PUBLIC_DIR = path.join(PROJECT_ROOT, 'public');
 const OUTPUT_DIR = path.join(PROJECT_ROOT, 'output');
 const SCRIPTS_DIR = path.join(PROJECT_ROOT, 'scripts');
+const DATA_STATIC_DIR = path.join(PROJECT_ROOT, 'data');
+export const FORBIDDEN_THEME_REGEX = /rotary(?:\s|[\-_.]|\\[tnr])*[sş][iıİI]hr[iıİI]/i;
+
+/**
+ * Deep Brand Veto String Checker
+ * Unescapes Unicode, Hex, HTML entities, URL encodings, zero-width spaces,
+ * and normalizes Turkish diacritics to ensure no variant of "Rotary Sihri" can evade detection.
+ */
+export function checkStringForForbiddenBrand(str) {
+  if (typeof str !== 'string' || !str) return false;
+  if (FORBIDDEN_THEME_REGEX.test(str)) return true;
+
+  let unescaped = str;
+  try {
+    if (unescaped.includes('%')) {
+      unescaped = decodeURIComponent(unescaped);
+    }
+  } catch {}
+
+  unescaped = unescaped
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(parseInt(dec, 10)));
+
+  unescaped = unescaped
+    .replace(/\\+u([0-9a-fA-F]{4})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+    .replace(/\\+u\{([0-9a-fA-F]+)\}/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/\\+x([0-9a-fA-F]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+
+  unescaped = unescaped.replace(/\\+[tnr]/g, ' ');
+  unescaped = unescaped.replace(/[\u200B-\u200D\uFEFF\u00AD\u2060]/g, '');
+  unescaped = unescaped.normalize('NFC');
+
+  if (FORBIDDEN_THEME_REGEX.test(unescaped)) return true;
+
+  const folded = unescaped
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[iıİI]/g, 'i')
+    .replace(/[sşŞS]/g, 's')
+    .replace(/[hH]/g, 'h')
+    .replace(/[rR]/g, 'r')
+    .toLowerCase();
+
+  return /rotary[\s_\-.]*sihri/.test(folded);
+}
+
+/**
+ * Recursively scans an object tree (keys and values) for any forbidden branding phrase.
+ */
+export function hasForbiddenBrandDeep(target, visited = new WeakSet()) {
+  if (target == null) return false;
+  if (typeof target === 'string') return checkStringForForbiddenBrand(target);
+  if (typeof target === 'number' || typeof target === 'boolean') return false;
+
+  if (typeof target === 'object') {
+    if (visited.has(target)) return false;
+    visited.add(target);
+
+    if (Array.isArray(target)) {
+      for (const item of target) {
+        if (hasForbiddenBrandDeep(item, visited)) return true;
+      }
+      return false;
+    }
+
+    for (const [key, value] of Object.entries(target)) {
+      if (checkStringForForbiddenBrand(key)) return true;
+      if (hasForbiddenBrandDeep(value, visited)) return true;
+    }
+  }
+
+  return false;
+}
+
 
 const DEFAULT_PORT = 3420;
 const MAX_PORT_ATTEMPTS = 10;
@@ -70,6 +143,13 @@ const MONTH_ORDER = [
   { num: 5, name: 'Mayıs', theme: 'Gençlik Hizmetleri Ayı' },
   { num: 6, name: 'Haziran', theme: 'Rotary Dostluk Grupları Ayı' }
 ];
+
+const ISSUE_PDF_MAP = {
+  '2026-07-temmuz': 'Galata_Rotary_Bulten_2026_07_Temmuz_Sayi_1.pdf',
+  '2026-08-agustos': 'Galata_Rotary_Bulten_2026_08_Agustos_Sayi_2.pdf',
+  '2026-09-eylul': 'Galata_Rotary_Bulten_2026_09_Eylul_Sayi_3.pdf',
+  '2026-10-ekim': 'Galata_Rotary_Bulten_2026_10_Ekim_Sayi_4.pdf'
+};
 
 /**
  * Reads request body as a Buffer
@@ -133,6 +213,7 @@ function serveStaticFile(res, basePath, relativePath) {
     res.writeHead(200, {
       'Content-Type': contentType,
       'Content-Length': stats.size,
+      'Access-Control-Allow-Origin': '*',
       'Cache-Control': ext === '.html' ? 'no-cache' : 'public, max-age=3600'
     });
 
@@ -196,12 +277,53 @@ function parseMultipartData(buffer, boundary) {
 }
 
 /**
+ * Path traversal sanitization for issue identifiers in server requests and templates.
+ * Rejects any identifiers containing traversal characters (.., /, \) or non-alphanumeric formats.
+ */
+export function sanitizeIssueId(rawId) {
+  if (!rawId || typeof rawId !== 'string') return null;
+  const trimmed = rawId.trim();
+  if (trimmed.includes('..') || trimmed.includes('/') || trimmed.includes('\\')) {
+    return null;
+  }
+  const clean = path.basename(trimmed).replace(/\.json$/i, '').trim();
+  if (!/^[a-zA-Z0-9_-]+$/.test(clean)) {
+    return null;
+  }
+  return clean;
+}
+
+/**
+ * Resolves an issue JSON file path within DATA_DIR and strictly asserts containment.
+ */
+export function resolveSafeIssuePath(safeId) {
+  if (!safeId || typeof safeId !== 'string' || !/^[a-zA-Z0-9_-]+$/.test(safeId)) {
+    return null;
+  }
+  const resolvedDataDir = path.resolve(DATA_DIR);
+  const resolvedDataDirWithSep = resolvedDataDir.endsWith(path.sep) ? resolvedDataDir : resolvedDataDir + path.sep;
+  const filePath = path.resolve(DATA_DIR, `${safeId}.json`);
+  if (!filePath.startsWith(resolvedDataDirWithSep)) {
+    return null;
+  }
+  return filePath;
+}
+
+/**
  * New Month Initializer / Issue Creator
  * Clones masthead & officers from the latest issue and creates a clean next-month template
  */
 export function createIssue(customData = {}) {
+  const serializedCustom = JSON.stringify(customData);
+  if (
+    FORBIDDEN_THEME_REGEX.test(serializedCustom) ||
+    hasForbiddenBrandDeep(customData)
+  ) {
+    throw new Error('Corporate Branding Violation: "Rotary Sihri" ifadesi kesinlikle kullanılamaz! Tema "KALICI ETKİ YARAT" olmalıdır.');
+  }
+
   fs.mkdirSync(DATA_DIR, { recursive: true });
-  const existingFiles = fs.readdirSync(DATA_DIR).filter(f => f.endsWith('.json'));
+  const existingFiles = fs.readdirSync(DATA_DIR).filter(f => f.endsWith('.json') && f !== 'index.json');
 
   // Read existing issues to discover highest issueNumber and base metadata
   let maxIssueNum = 0;
@@ -229,9 +351,18 @@ export function createIssue(customData = {}) {
     }
   }
 
-  const targetMonth = customData.month || MONTH_ORDER[nextMonthIndex].name;
-  const targetYear = customData.year || (baseIssue ? baseIssue.year : 2026);
-  const targetTheme = customData.rotaryMonthTheme || MONTH_ORDER[nextMonthIndex].theme;
+  let monthEntry = null;
+  if (customData.month) {
+    monthEntry = MONTH_ORDER.find(m => m.name.toLowerCase() === String(customData.month).trim().toLowerCase());
+  }
+  if (!monthEntry) {
+    monthEntry = MONTH_ORDER[nextMonthIndex];
+  }
+
+  const targetMonth = customData.month || monthEntry.name;
+  const rawYear = customData.year || (baseIssue ? baseIssue.year : 2026);
+  const targetYear = parseInt(rawYear, 10) || 2026;
+  const targetTheme = customData.rotaryMonthTheme || monthEntry.theme;
 
   const monthSlug = targetMonth
     .toLowerCase()
@@ -242,16 +373,24 @@ export function createIssue(customData = {}) {
     .replace(/ö/g, 'o')
     .replace(/ç/g, 'c');
 
-  const monthNumStr = String(MONTH_ORDER[nextMonthIndex].num).padStart(2, '0');
-  const newId = customData.id || `${targetYear}-${monthNumStr}-${monthSlug}`;
-  const targetFilePath = path.join(DATA_DIR, `${newId}.json`);
+  const monthNumStr = String(monthEntry.num).padStart(2, '0');
+  const rawId = (customData.id ? String(customData.id) : `${targetYear}-${monthNumStr}-${monthSlug}`).trim();
+  const safeId = sanitizeIssueId(rawId);
+  if (!safeId) {
+    throw new Error(`Invalid issue ID format: "${rawId}"`);
+  }
+
+  const targetFilePath = resolveSafeIssuePath(safeId);
+  if (!targetFilePath) {
+    throw new Error('Target file path outside data directory');
+  }
 
   if (fs.existsSync(targetFilePath) && !customData.overwrite) {
-    throw new Error(`Sayı zaten mevcut: ${newId}. Farklı bir ay veya id seçiniz.`);
+    throw new Error(`Sayı zaten mevcut: ${safeId}. Farklı bir ay veya id seçiniz.`);
   }
 
   const newIssueTemplate = {
-    id: newId,
+    id: safeId,
     issueNumber: customData.issueNumber || nextIssueNum,
     rotaryYear: "2026-2027",
     month: targetMonth,
@@ -354,7 +493,7 @@ async function handleRequest(req, res) {
       if (!fs.existsSync(DATA_DIR)) {
         return sendJSON(res, 200, []);
       }
-      const files = fs.readdirSync(DATA_DIR).filter(f => f.endsWith('.json'));
+      const files = fs.readdirSync(DATA_DIR).filter(f => f.endsWith('.json') && f !== 'index.json');
       const issues = [];
 
       for (const file of files) {
@@ -389,16 +528,23 @@ async function handleRequest(req, res) {
 
   // GET /api/issues/:id -> retrieve specific issue
   if (method === 'GET' && pathname.startsWith('/api/issues/')) {
-    const issueId = pathname.replace('/api/issues/', '').trim();
-    if (!issueId) {
+    const rawIssueId = pathname.replace('/api/issues/', '').trim();
+    if (!rawIssueId) {
       return sendJSON(res, 400, { error: 'Issue ID required' });
     }
 
-    const filename = issueId.endsWith('.json') ? issueId : `${issueId}.json`;
-    const filePath = path.join(DATA_DIR, filename);
+    const safeIssueId = sanitizeIssueId(rawIssueId);
+    if (!safeIssueId) {
+      return sendJSON(res, 400, { error: 'Invalid issue ID format' });
+    }
+
+    const filePath = resolveSafeIssuePath(safeIssueId);
+    if (!filePath) {
+      return sendJSON(res, 403, { error: 'Access denied' });
+    }
 
     if (!fs.existsSync(filePath)) {
-      return sendJSON(res, 404, { error: `Issue not found: ${issueId}` });
+      return sendJSON(res, 404, { error: `Issue not found: ${safeIssueId}` });
     }
 
     try {
@@ -411,18 +557,38 @@ async function handleRequest(req, res) {
 
   // PUT /api/issues/:id -> update issue JSON
   if (method === 'PUT' && pathname.startsWith('/api/issues/')) {
-    const issueId = pathname.replace('/api/issues/', '').trim();
-    if (!issueId) {
+    const rawIssueId = pathname.replace('/api/issues/', '').trim();
+    if (!rawIssueId) {
       return sendJSON(res, 400, { error: 'Issue ID required' });
+    }
+
+    const safeIssueId = sanitizeIssueId(rawIssueId);
+    if (!safeIssueId) {
+      return sendJSON(res, 400, { error: 'Invalid issue ID format' });
+    }
+
+    const filePath = resolveSafeIssuePath(safeIssueId);
+    if (!filePath) {
+      return sendJSON(res, 403, { error: 'Access denied' });
     }
 
     try {
       const bodyBuffer = await readRequestBody(req);
-      const issueData = JSON.parse(bodyBuffer.toString('utf8'));
+      const rawBody = bodyBuffer.toString('utf8');
+      let issueData;
+      try {
+        issueData = JSON.parse(rawBody);
+      } catch (parseErr) {
+        return sendJSON(res, 400, { error: 'Invalid JSON payload', details: parseErr.message });
+      }
 
-      // Validate strict corporate branding rules
+      // Validate strict corporate branding rules (case-insensitive & Turkish resilient & deep unescaped scan)
       const stringified = JSON.stringify(issueData);
-      if (stringified.includes('Rotary Sihri')) {
+      if (
+        FORBIDDEN_THEME_REGEX.test(stringified) ||
+        FORBIDDEN_THEME_REGEX.test(rawBody) ||
+        hasForbiddenBrandDeep(issueData)
+      ) {
         return sendJSON(res, 400, {
           error: 'Corporate Branding Violation: "Rotary Sihri" ifadesi kesinlikle kullanılamaz! Tema "KALICI ETKİ YARAT" olmalıdır.'
         });
@@ -432,16 +598,13 @@ async function handleRequest(req, res) {
         issueData.theme = 'KALICI ETKİ YARAT';
       }
 
-      const filename = issueId.endsWith('.json') ? issueId : `${issueId}.json`;
-      const filePath = path.join(DATA_DIR, filename);
-
       fs.mkdirSync(DATA_DIR, { recursive: true });
       fs.writeFileSync(filePath, JSON.stringify(issueData, null, 2), 'utf8');
 
       return sendJSON(res, 200, {
         success: true,
         message: 'Bülten başarıyla kaydedildi.',
-        id: issueId,
+        id: safeIssueId,
         issue: issueData
       });
     } catch (err) {
@@ -479,11 +642,14 @@ async function handleRequest(req, res) {
       const contentType = req.headers['content-type'] || '';
       const bodyBuffer = await readRequestBody(req);
 
-      let savedUrl = null;
-      let filename = null;
+      let fileBuffer = null;
+      let rawFilename = null;
+      let isMultipart = false;
       let issueFolder = parsedUrl.searchParams.get('issue') || '2026-09';
+      let jsonPayload = null;
 
       if (contentType.includes('multipart/form-data')) {
+        isMultipart = true;
         const boundaryMatch = contentType.match(/boundary=([^\s;]+)/i);
         if (!boundaryMatch) {
           return sendJSON(res, 400, { error: 'Missing boundary in multipart request' });
@@ -500,37 +666,81 @@ async function handleRequest(req, res) {
         }
 
         const file = parsed.files[0];
-        filename = Date.now() + '_' + file.filename.replace(/[^a-zA-Z0-9._-]/g, '_');
-        const targetDir = path.join(PUBLIC_DIR, 'assets', 'photos', issueFolder);
-        fs.mkdirSync(targetDir, { recursive: true });
-        fs.writeFileSync(path.join(targetDir, filename), file.data);
-        savedUrl = `assets/photos/${issueFolder}/${filename}`;
+        rawFilename = file.filename;
+        fileBuffer = file.data;
       } else if (contentType.includes('application/json')) {
-        const json = JSON.parse(bodyBuffer.toString('utf8'));
-        issueFolder = json.issue || issueFolder;
-        filename = json.filename || `upload_${Date.now()}.jpg`;
-        filename = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
-
-        if (!json.data) {
+        try {
+          jsonPayload = JSON.parse(bodyBuffer.toString('utf8'));
+        } catch {
+          return sendJSON(res, 400, { error: 'Invalid JSON payload' });
+        }
+        if (jsonPayload.issue) {
+          issueFolder = jsonPayload.issue;
+        }
+        if (!jsonPayload.data) {
           return sendJSON(res, 400, { error: 'Missing base64 data property in JSON' });
         }
-
-        const base64Data = json.data.replace(/^data:image\/\w+;base64,/, '');
-        const buffer = Buffer.from(base64Data, 'base64');
-
-        const targetDir = path.join(PUBLIC_DIR, 'assets', 'photos', issueFolder);
-        fs.mkdirSync(targetDir, { recursive: true });
-        fs.writeFileSync(path.join(targetDir, filename), buffer);
-        savedUrl = `assets/photos/${issueFolder}/${filename}`;
+        rawFilename = jsonPayload.filename || `upload_${Date.now()}.jpg`;
+        const base64Data = jsonPayload.data.replace(/^data:image\/\w+;base64,/, '');
+        fileBuffer = Buffer.from(base64Data, 'base64');
       } else {
         return sendJSON(res, 400, { error: 'Unsupported Content-Type. Use multipart/form-data or application/json (base64).' });
       }
+
+      // 1. Sanitize issueFolder with path.basename and enforce strict regex
+      const rawFolder = String(issueFolder || '').trim();
+      const safeFolder = path.basename(rawFolder).trim();
+      if (!rawFolder || !/^[a-zA-Z0-9_-]+$/.test(rawFolder) || !/^[a-zA-Z0-9_-]+$/.test(safeFolder) || safeFolder !== rawFolder) {
+        return sendJSON(res, 400, { error: 'Invalid issue folder format' });
+      }
+
+      // Assert target directory stays strictly inside public/assets/photos
+      const photosBaseDir = path.join(PUBLIC_DIR, 'assets', 'photos');
+      const targetDir = path.join(photosBaseDir, safeFolder);
+      const resolvedPhotosBase = path.resolve(photosBaseDir);
+      const resolvedTargetDir = path.resolve(targetDir);
+
+      if (!targetDir.startsWith(photosBaseDir) || !resolvedTargetDir.startsWith(resolvedPhotosBase + path.sep)) {
+        return sendJSON(res, 403, { error: 'Access denied: Target directory outside photos directory' });
+      }
+
+      // 2. Sanitize filename using path.basename and validate extension
+      const ALLOWED_PHOTO_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.svg']);
+      const cleanBasename = path.basename(String(rawFilename || '')).trim();
+      const rawExt = path.extname(cleanBasename);
+      const ext = rawExt.toLowerCase();
+
+      if (!ext || !ALLOWED_PHOTO_EXTENSIONS.has(ext)) {
+        return sendJSON(res, 400, {
+          error: `Invalid file extension "${ext}". Allowed extensions: .jpg, .jpeg, .png, .webp, .svg`
+        });
+      }
+
+      const stemRaw = cleanBasename.slice(0, cleanBasename.length - rawExt.length);
+      const sanitizedStem = stemRaw.replace(/[^a-zA-Z0-9_-]/g, '_').replace(/^_+|_+$/g, '');
+      const stem = sanitizedStem.length > 0 ? sanitizedStem : 'upload';
+      const finalFilename = isMultipart
+        ? `${Date.now()}_${stem}${ext}`
+        : (jsonPayload && jsonPayload.filename ? `${stem}${ext}` : `upload_${Date.now()}${ext}`);
+
+      // 3. Assert final destination file path stays strictly inside targetDir
+      const destinationPath = path.join(targetDir, finalFilename);
+      const resolvedDest = path.resolve(destinationPath);
+
+      if (!destinationPath.startsWith(targetDir) || !resolvedDest.startsWith(resolvedTargetDir + path.sep)) {
+        return sendJSON(res, 403, { error: 'Access denied: Destination path outside target directory' });
+      }
+
+      // 4. Safely ensure directory exists and write file
+      fs.mkdirSync(targetDir, { recursive: true });
+      fs.writeFileSync(destinationPath, fileBuffer);
+      const savedUrl = `assets/photos/${safeFolder}/${finalFilename}`;
 
       return sendJSON(res, 200, {
         success: true,
         message: 'Görsel başarıyla yüklendi',
         url: savedUrl,
-        filename
+        filename: finalFilename
       });
     } catch (err) {
       return sendJSON(res, 500, { error: 'Image upload failed', details: err.message });
@@ -539,10 +749,16 @@ async function handleRequest(req, res) {
 
   // POST /api/export-pdf/:id -> trigger headless Chrome PDF generation
   if (method === 'POST' && pathname.startsWith('/api/export-pdf/')) {
-    const issueId = pathname.replace('/api/export-pdf/', '').trim();
-    if (!issueId) {
+    const rawIssueId = pathname.replace('/api/export-pdf/', '').trim();
+    if (!rawIssueId) {
       return sendJSON(res, 400, { error: 'Issue ID required' });
     }
+
+    const safeIssueId = sanitizeIssueId(rawIssueId);
+    if (!safeIssueId) {
+      return sendJSON(res, 400, { error: 'Invalid issue ID format' });
+    }
+    const issueId = safeIssueId;
 
     try {
       const scriptPath = path.join(SCRIPTS_DIR, 'export-pdf.mjs');
@@ -556,9 +772,20 @@ async function handleRequest(req, res) {
       console.log('[PDF Export Output]:', stdout);
       if (stderr) console.error('[PDF Export Stderr]:', stderr);
 
-      // Determine PDF filename in output directory
-      const pdfFiles = fs.readdirSync(OUTPUT_DIR).filter(f => f.endsWith('.pdf'));
-      const matched = pdfFiles.find(f => f.toLowerCase().includes(issueId.toLowerCase().split('-')[2] || ''));
+      // Determine PDF filename in output directory robustly
+      let matched = null;
+      if (ISSUE_PDF_MAP[issueId] && fs.existsSync(path.join(OUTPUT_DIR, ISSUE_PDF_MAP[issueId]))) {
+        matched = ISSUE_PDF_MAP[issueId];
+      } else if (fs.existsSync(path.join(OUTPUT_DIR, `${issueId}.pdf`))) {
+        matched = `${issueId}.pdf`;
+      } else if (fs.existsSync(OUTPUT_DIR)) {
+        const pdfFiles = fs.readdirSync(OUTPUT_DIR).filter(f => f.endsWith('.pdf'));
+        const parts = issueId.toLowerCase().split(/[-_]/).filter(Boolean);
+        matched = pdfFiles.find(f => {
+          const lower = f.toLowerCase();
+          return lower.includes(issueId.toLowerCase()) || parts.some(part => part.length >= 3 && lower.includes(part));
+        }) || null;
+      }
 
       return sendJSON(res, 200, {
         success: true,
@@ -579,7 +806,7 @@ async function handleRequest(req, res) {
   // POST /api/rotaclub/sync -> mock RotaClub synchronization
   if (method === 'POST' && pathname === '/api/rotaclub/sync') {
     try {
-      const files = fs.existsSync(DATA_DIR) ? fs.readdirSync(DATA_DIR).filter(f => f.endsWith('.json')) : [];
+      const files = fs.existsSync(DATA_DIR) ? fs.readdirSync(DATA_DIR).filter(f => f.endsWith('.json') && f !== 'index.json') : [];
       return sendJSON(res, 200, {
         success: true,
         message: 'RotaClub veri senkronizasyonu tamamlandı.',
@@ -604,8 +831,14 @@ async function handleRequest(req, res) {
 
   // Output folder PDFs: /output/*
   if (pathname.startsWith('/output/')) {
-    const relPath = pathname.replace('/output/', '');
+    const relPath = pathname.slice('/output/'.length);
     return serveStaticFile(res, OUTPUT_DIR, relPath);
+  }
+
+  // Data folder JSON files & static catalogs: /data/*
+  if (pathname.startsWith('/data/')) {
+    const relPath = pathname.slice('/data/'.length);
+    return serveStaticFile(res, DATA_STATIC_DIR, relPath);
   }
 
   // Root -> /index.html

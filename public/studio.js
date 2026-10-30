@@ -4,12 +4,138 @@
  * live A4 preview scaling, and real-time 297mm height boundary overflow detection.
  */
 
-// State Management
+// State Management & Dual Runtime Mode
 let currentIssue = null;
 let availableIssues = [];
 let renderDebounceTimer = null;
 let currentZoom = 0.75; // Default 75% zoom
 let isFitMode = true;
+let activeRuntimeMode = 'local'; // 'local' or 'static'
+let currentReaderPage = 1;
+let readerPageObserver = null;
+let isNavigating = false;
+let navigationTimer = null;
+let overflowCycleIndex = 0;
+
+// Official Pre-Rendered PDF Mapping
+const ISSUE_PDF_MAP = {
+  '2026-07-temmuz': 'Galata_Rotary_Bulten_2026_07_Temmuz_Sayi_1.pdf',
+  '2026-08-agustos': 'Galata_Rotary_Bulten_2026_08_Agustos_Sayi_2.pdf',
+  '2026-09-eylul': 'Galata_Rotary_Bulten_2026_09_Eylul_Sayi_3.pdf',
+  '2026-10-ekim': 'Galata_Rotary_Bulten_2026_10_Ekim_Sayi_4.pdf'
+};
+
+// Resilient Hardcoded Fallback Catalog (Used when index.json is absent or offline)
+const FALLBACK_ISSUES_CATALOG = [
+  { id: '2026-07-temmuz', issueNumber: 1, month: 'Temmuz', year: 2026, rotaryMonthTheme: 'Anne ve Çocuk Sağlığı Ayı', pageCount: 8, pdfFile: 'Galata_Rotary_Bulten_2026_07_Temmuz_Sayi_1.pdf' },
+  { id: '2026-08-agustos', issueNumber: 2, month: 'Ağustos', year: 2026, rotaryMonthTheme: 'Üyelik ve Yeni Kulüp Geliştirme Ayı', pageCount: 8, pdfFile: 'Galata_Rotary_Bulten_2026_08_Agustos_Sayi_2.pdf' },
+  { id: '2026-09-eylul', issueNumber: 3, month: 'Eylül', year: 2026, rotaryMonthTheme: 'Temel Eğitim ve Okuryazarlık Ayı', pageCount: 9, pdfFile: 'Galata_Rotary_Bulten_2026_09_Eylul_Sayi_3.pdf' },
+  { id: '2026-10-ekim', issueNumber: 4, month: 'Ekim', year: 2026, rotaryMonthTheme: 'Toplumsal ve Ekonomik Kalkınma Ayı', pageCount: 9, pdfFile: 'Galata_Rotary_Bulten_2026_10_Ekim_Sayi_4.pdf' }
+];
+
+// Corporate Theme Validation (Turkish-resilient regex)
+const FORBIDDEN_THEME_REGEX = /rotary(?:\s|[\-_.]|\\[tnr])*[sş][iıİI]hr[iıİI]/i;
+
+function checkStringForForbiddenBrand(str) {
+  if (typeof str !== 'string' || !str) return false;
+  if (FORBIDDEN_THEME_REGEX.test(str)) return true;
+
+  let unescaped = str;
+  try {
+    if (unescaped.includes('%')) {
+      unescaped = decodeURIComponent(unescaped);
+    }
+  } catch {}
+
+  unescaped = unescaped
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(parseInt(dec, 10)));
+
+  unescaped = unescaped
+    .replace(/\\+u([0-9a-fA-F]{4})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+    .replace(/\\+u\{([0-9a-fA-F]+)\}/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/\\+x([0-9a-fA-F]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+
+  unescaped = unescaped.replace(/\\+[tnr]/g, ' ');
+  unescaped = unescaped.replace(/[\u200B-\u200D\uFEFF\u00AD\u2060]/g, '');
+  unescaped = unescaped.normalize('NFC');
+
+  if (FORBIDDEN_THEME_REGEX.test(unescaped)) return true;
+
+  const folded = unescaped
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[iıİI]/g, 'i')
+    .replace(/[sşŞS]/g, 's')
+    .replace(/[hH]/g, 'h')
+    .replace(/[rR]/g, 'r')
+    .toLowerCase();
+
+  return /rotary[\s_\-.]*sihri/.test(folded);
+}
+
+function hasForbiddenBrandDeep(target, visited = new WeakSet()) {
+  if (target == null) return false;
+  if (typeof target === 'string') return checkStringForForbiddenBrand(target);
+  if (typeof target === 'number' || typeof target === 'boolean') return false;
+
+  if (typeof target === 'object') {
+    if (visited.has(target)) return false;
+    visited.add(target);
+
+    if (Array.isArray(target)) {
+      for (const item of target) {
+        if (hasForbiddenBrandDeep(item, visited)) return true;
+      }
+      return false;
+    }
+
+    for (const [key, value] of Object.entries(target)) {
+      if (checkStringForForbiddenBrand(key)) return true;
+      if (hasForbiddenBrandDeep(value, visited)) return true;
+    }
+  }
+
+  return false;
+}
+
+
+/**
+ * Resolves relative file paths safely across root or nested subpaths (e.g. GitHub Pages)
+ */
+function resolveAppPath(relPath) {
+  const cleanRel = relPath.replace(/^\/+/, '');
+  const path = window.location.pathname;
+  const dir = path.substring(0, path.lastIndexOf('/') + 1) || '/';
+  return `${window.location.origin}${dir}${cleanRel}`;
+}
+
+/**
+ * Updates UI badge indicating active runtime mode
+ */
+function updateRuntimeModeBadge() {
+  let badge = document.getElementById('runtime-mode-badge');
+  if (!badge) {
+    const centerGroup = document.querySelector('.studio-header-center');
+    if (centerGroup) {
+      badge = document.createElement('div');
+      badge.id = 'runtime-mode-badge';
+      badge.className = 'runtime-mode-badge';
+      centerGroup.appendChild(badge);
+    }
+  }
+
+  if (badge) {
+    if (activeRuntimeMode === 'local') {
+      badge.className = 'runtime-mode-badge mode-local';
+      badge.innerHTML = `<span>🟢</span> <span>Yerel Sunucu (REST API)</span>`;
+      badge.title = 'Aktif Mod: Yerel Node.js API (Değişiklikler diske kaydedilir, Chrome Headless PDF aktiftir)';
+    } else {
+      badge.className = 'runtime-mode-badge mode-static';
+      badge.innerHTML = `<span>🌐</span> <span>Statik Mod (GitHub Pages)</span>`;
+      badge.title = 'Aktif Mod: Statik Tarayıcı Modu (Değişiklikler localStorage\'a kaydedilir, JSON ve PDF doğrudan indirilir)';
+    }
+  }
+}
 
 /**
  * Shows an animated toast notification
@@ -31,25 +157,66 @@ function showToast(message, type = 'info') {
 }
 
 /**
- * Fetches all available issues and populates the dropdown selector
+ * Resilient Issue List Loader:
+ * Automatically probes environment, falls back to static catalog / hardcoded registry,
+ * and handles offline or GitHub Pages execution seamlessly.
  */
 async function loadIssuesList(selectedId = null) {
-  try {
-    const res = await fetch('/api/issues');
-    if (!res.ok) throw new Error('Sunucudan bülten listesi alınamadı.');
-    availableIssues = await res.json();
+  const selector = document.getElementById('issue-select');
+  if (selector && availableIssues.length === 0) {
+    selector.innerHTML = '<option value="" disabled selected>Sayılar yükleniyor...</option>';
+  }
 
-    const selector = document.getElementById('issue-select');
+  let issues = null;
+  const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+  // 1. Probe Local Server API if running on localhost
+  if (isLocalHost) {
+    try {
+      const res = await fetch('/api/issues', { method: 'GET' });
+      if (res.ok) {
+        issues = await res.json();
+        activeRuntimeMode = 'local';
+      }
+    } catch (err) {
+      console.warn('Yerel REST API erişilemedi, statik moda geçiliyor:', err.message);
+    }
+  }
+
+  // 2. Static Mode Fallback
+  if (!issues) {
+    activeRuntimeMode = 'static';
+    try {
+      const catalogUrl = resolveAppPath('data/issues/index.json');
+      const res = await fetch(catalogUrl);
+      if (res.ok) {
+        issues = await res.json();
+      }
+    } catch (err) {
+      console.warn('data/issues/index.json bulunamadı, yerleşik katalog kullanılıyor:', err.message);
+    }
+
+    // 3. Built-in hardcoded fallback if static index is missing
+    if (!issues || !Array.isArray(issues) || issues.length === 0) {
+      issues = FALLBACK_ISSUES_CATALOG;
+    }
+  }
+
+  availableIssues = issues;
+  updateRuntimeModeBadge();
+
+  // Populate Dropdown Selector
+  if (selector) {
     selector.innerHTML = '';
-
     availableIssues.forEach(issue => {
       const option = document.createElement('option');
       option.value = issue.id;
-      option.textContent = `${issue.month} ${issue.year} (Sayı ${issue.issueNumber})`;
+      // Mark if modified in localStorage
+      const hasLocalChanges = !!localStorage.getItem(`galata_issue_${issue.id}`);
+      option.textContent = `${issue.month} ${issue.year} (Sayı ${issue.issueNumber})${hasLocalChanges ? ' ✏️' : ''}`;
       selector.appendChild(option);
     });
 
-    // Default to preferred issue (e.g. 2026-09-eylul or first available)
     let targetId = selectedId;
     if (!targetId) {
       const priorityIssue = availableIssues.find(i => i.id === '2026-09-eylul');
@@ -60,20 +227,61 @@ async function loadIssuesList(selectedId = null) {
       selector.value = targetId;
       await selectIssue(targetId);
     }
-  } catch (err) {
-    showToast(`Hata: ${err.message}`, 'error');
   }
 }
 
 /**
- * Loads a specific issue JSON by ID into memory and updates forms
+ * Loads a specific issue JSON by ID into memory and updates forms.
+ * In static mode: checks localStorage first, then fetches data/issues/${id}.json.
  */
 async function selectIssue(issueId) {
   try {
-    const res = await fetch(`/api/issues/${encodeURIComponent(issueId)}`);
-    if (!res.ok) throw new Error(`Bülten yüklenemedi: ${issueId}`);
-    currentIssue = await res.json();
+    let issueData = null;
 
+    if (activeRuntimeMode === 'local') {
+      try {
+        const res = await fetch(`/api/issues/${encodeURIComponent(issueId)}`);
+        if (res.ok) {
+          issueData = await res.json();
+        } else {
+          throw new Error(`API Hatası (${res.status})`);
+        }
+      } catch (err) {
+        console.warn('Yerel API başarısız, statik dosya deneniyor:', err.message);
+      }
+    }
+
+    // Static Mode or Fallback
+    if (!issueData) {
+      // Check localStorage for user-modified drafts
+      const localDraft = localStorage.getItem(`galata_issue_${issueId}`);
+      if (localDraft) {
+        try {
+          issueData = JSON.parse(localDraft);
+          showToast(`"${issueId}" için tarayıcı hafızasındaki yerel taslak yüklendi.`, 'info');
+        } catch (e) {
+          console.error('localStorage JSON parse hatası:', e);
+        }
+      }
+
+      // Fetch static JSON file if not in localStorage
+      if (!issueData) {
+        const staticUrl = resolveAppPath(`data/issues/${issueId}.json`);
+        const res = await fetch(staticUrl);
+        if (!res.ok) throw new Error(`Bülten verisi (${issueId}.json) statik olarak yüklenemedi: HTTP ${res.status}`);
+        issueData = await res.json();
+      }
+    }
+
+    // Reset Reader Page state on issue switch
+    currentReaderPage = 1;
+    updateReaderPageIndicator(1);
+    const jumpSelect = document.getElementById('reader-page-jump-select');
+    if (jumpSelect) jumpSelect.value = '1';
+    const viewport = document.getElementById('preview-viewport');
+    if (viewport) viewport.scrollTop = 0;
+
+    currentIssue = issueData;
     populateFormsFromModel();
     renderLivePreview();
   } catch (err) {
@@ -199,32 +407,58 @@ function syncModelFromForms() {
 }
 
 /**
- * Renders dynamic article cards in the editor pane
+ * Generates DOM for a single photo row
  */
-function renderArticleCards() {
-  const container = document.getElementById('articles-container');
-  if (!container || !currentIssue) return;
+function createPhotoRowElement(photo, artIndex, photoIndex) {
+  const row = document.createElement('div');
+  row.className = 'photo-item-row';
+  row.dataset.photoIndex = photoIndex;
 
-  container.innerHTML = '';
-  const articles = currentIssue.articles || [];
+  row.innerHTML = `
+    <img src="${escapeAttr(photo.url || 'assets/brand/galata-silhouette.svg')}" class="photo-preview-thumb" alt="Thumb" onerror="this.src='assets/brand/galata-silhouette.svg'">
+    <div class="photo-inputs">
+      <input type="text" class="photo-url-input" value="${escapeAttr(photo.url || '')}" placeholder="Görsel Yolu (assets/photos/...)" data-pindex="${photoIndex}" data-art-index="${artIndex}">
+      <input type="text" class="photo-caption-input" value="${escapeAttr(photo.caption || '')}" placeholder="Fotoğraf Açıklaması" data-pindex="${photoIndex}" data-art-index="${artIndex}">
+    </div>
+    <label class="file-upload-label" style="padding:4px 8px; margin:0;" title="Yeni Fotoğraf Yükle">
+      <span>📁</span>
+      <input type="file" class="hidden-file-input" data-art-index="${artIndex}" data-photo-index="${photoIndex}" accept="image/*">
+    </label>
+    <button type="button" class="article-delete-btn" style="padding:2px 6px;" data-action="delete-photo" data-art-index="${artIndex}" data-photo-index="${photoIndex}" title="Fotoğrafı Kaldır">
+      ✕
+    </button>
+  `;
+  return row;
+}
 
-  articles.forEach((art, index) => {
-    const card = document.createElement('div');
-    card.className = 'article-card-item';
-    card.dataset.index = index;
+/**
+ * Generates DOM for a single article card (accordion enabled)
+ */
+function createArticleCardElement(art, index, isCollapsed = false) {
+  const card = document.createElement('div');
+  card.className = `article-card-item ${isCollapsed ? 'is-collapsed' : ''}`;
+  card.dataset.index = index;
 
-    const bentoLayout = art.layout || 'two-col';
+  const bentoLayout = art.layout || 'two-col';
+  const displayTitle = art.title ? (art.title.length > 28 ? art.title.substring(0, 28) + '...' : art.title) : 'Başlıksız Haber';
 
-    card.innerHTML = `
-      <div class="article-card-header">
+  card.innerHTML = `
+    <div class="article-card-header" data-action="toggle-card" data-index="${index}" title="Genişlet / Daralt">
+      <div class="article-header-left">
+        <span class="card-chevron">${isCollapsed ? '►' : '▼'}</span>
         <span class="article-num-title">
-          <span>📄</span> Haber #${index + 1}: ${art.title ? (art.title.length > 25 ? art.title.substring(0, 25) + '...' : art.title) : 'Başlıksız Haber'}
+          <span>📄</span> Haber #${index + 1}: <span class="article-title-preview">${escapeHtml(displayTitle)}</span>
         </span>
+      </div>
+      <div class="article-header-right">
+        <span class="article-bento-badge">${escapeHtml(bentoLayout)}</span>
         <button type="button" class="article-delete-btn" data-action="delete-article" data-index="${index}" title="Bu haberi bültenden sil">
           ✕ Sil
         </button>
       </div>
+    </div>
 
+    <div class="article-card-body">
       <div class="form-group">
         <label class="form-label">Başlık</label>
         <input type="text" class="form-input art-field" data-field="title" value="${escapeAttr(art.title || '')}" placeholder="Haber Başlığı">
@@ -277,35 +511,258 @@ function renderArticleCards() {
       <!-- Photos Management -->
       <div class="form-group">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-          <label class="form-label" style="margin-bottom:0;">Fotoğraflar (${(art.photos || []).length})</label>
+          <label class="form-label photos-count-label" style="margin-bottom:0;">Fotoğraflar (${(art.photos || []).length})</label>
           <button type="button" class="btn btn-secondary" style="font-size:11px; padding:3px 8px;" data-action="add-photo" data-art-index="${index}">
             + Fotoğraf Ekle
           </button>
         </div>
 
         <div class="photos-list" data-art-index="${index}">
-          ${(art.photos || []).map((photo, pIdx) => `
-            <div class="photo-item-row" data-photo-index="${pIdx}">
-              <img src="${escapeAttr(photo.url || 'assets/brand/galata-silhouette.svg')}" class="photo-preview-thumb" alt="Thumb" onerror="this.src='assets/brand/galata-silhouette.svg'">
-              <div class="photo-inputs">
-                <input type="text" class="photo-url-input" value="${escapeAttr(photo.url || '')}" placeholder="Görsel Yolu (assets/photos/...)" data-pindex="${pIdx}">
-                <input type="text" class="photo-caption-input" value="${escapeAttr(photo.caption || '')}" placeholder="Fotoğraf Açıklaması" data-pindex="${pIdx}">
-              </div>
-              <label class="file-upload-label" style="padding:4px 8px; margin:0;" title="Yeni Fotoğraf Yükle">
-                <span>📁</span>
-                <input type="file" class="hidden-file-input" data-art-index="${index}" data-photo-index="${pIdx}" accept="image/*">
-              </label>
-              <button type="button" class="article-delete-btn" style="padding:2px 6px;" data-action="delete-photo" data-art-index="${index}" data-photo-index="${pIdx}" title="Fotoğrafı Kaldır">
-                ✕
-              </button>
-            </div>
-          `).join('')}
         </div>
       </div>
-    `;
+    </div>
+  `;
 
-    container.appendChild(card);
+  // Append photo items to list
+  const photosList = card.querySelector('.photos-list');
+  (art.photos || []).forEach((photo, pIdx) => {
+    photosList.appendChild(createPhotoRowElement(photo, index, pIdx));
   });
+
+  return card;
+}
+
+/**
+ * Initial or full render of article cards (used only on issue select)
+ * Restores scroll position smoothly
+ */
+function renderArticleCards() {
+  const container = document.getElementById('articles-container');
+  if (!container || !currentIssue) return;
+
+  const scrollArea = document.querySelector('.editor-scroll-area');
+  const prevScrollTop = scrollArea ? scrollArea.scrollTop : 0;
+
+  container.innerHTML = '';
+  const articles = currentIssue.articles || [];
+
+  articles.forEach((art, index) => {
+    // Keep first card expanded, subsequent collapsed by default for clean UX
+    const isCollapsed = index > 0;
+    container.appendChild(createArticleCardElement(art, index, isCollapsed));
+  });
+
+  if (scrollArea && prevScrollTop > 0) {
+    scrollArea.scrollTop = prevScrollTop;
+  }
+}
+
+/**
+ * Non-destructive: Adds a photo to a specific article without rebuilding other cards
+ */
+function addPhotoToArticle(artIdx) {
+  if (!currentIssue.articles || !currentIssue.articles[artIdx]) return;
+  if (!currentIssue.articles[artIdx].photos) currentIssue.articles[artIdx].photos = [];
+
+  const newPhoto = {
+    url: 'assets/brand/galata-silhouette.svg',
+    caption: 'Yeni Fotoğraf Açıklaması'
+  };
+  currentIssue.articles[artIdx].photos.push(newPhoto);
+  const photoIndex = currentIssue.articles[artIdx].photos.length - 1;
+
+  const card = document.querySelector(`.article-card-item[data-index="${artIdx}"]`);
+  if (card) {
+    // Ensure card is expanded so user sees the new photo
+    if (card.classList.contains('is-collapsed')) {
+      card.classList.remove('is-collapsed');
+      const chevron = card.querySelector('.card-chevron');
+      if (chevron) chevron.textContent = '▼';
+    }
+
+    const photosList = card.querySelector(`.photos-list[data-art-index="${artIdx}"]`);
+    const countLabel = card.querySelector('.photos-count-label');
+
+    if (photosList) {
+      const newRow = createPhotoRowElement(newPhoto, artIdx, photoIndex);
+      photosList.appendChild(newRow);
+
+      if (countLabel) {
+        countLabel.textContent = `Fotoğraflar (${currentIssue.articles[artIdx].photos.length})`;
+      }
+
+      // Automatically focus and select the new URL input
+      const urlInput = newRow.querySelector('.photo-url-input');
+      if (urlInput) {
+        urlInput.focus();
+        urlInput.select();
+      }
+    }
+  }
+
+  queuePreviewRender();
+}
+
+/**
+ * Non-destructive: Removes a specific photo from an article without rebuilding cards
+ */
+function deletePhotoFromArticle(artIdx, photoIndex) {
+  if (!currentIssue.articles || !currentIssue.articles[artIdx] || !currentIssue.articles[artIdx].photos) return;
+
+  currentIssue.articles[artIdx].photos.splice(photoIndex, 1);
+
+  const card = document.querySelector(`.article-card-item[data-index="${artIdx}"]`);
+  if (card) {
+    const photosList = card.querySelector(`.photos-list[data-art-index="${artIdx}"]`);
+    const countLabel = card.querySelector('.photos-count-label');
+
+    if (photosList) {
+      const rowToRemove = photosList.querySelector(`.photo-item-row[data-photo-index="${photoIndex}"]`);
+      if (rowToRemove) {
+        rowToRemove.remove();
+      }
+
+      // Re-index remaining photo rows in this card
+      const remainingRows = photosList.querySelectorAll('.photo-item-row');
+      remainingRows.forEach((row, newPIdx) => {
+        row.dataset.photoIndex = newPIdx;
+        const urlInp = row.querySelector('.photo-url-input');
+        const capInp = row.querySelector('.photo-caption-input');
+        const fileInp = row.querySelector('.hidden-file-input');
+        const delBtn = row.querySelector('[data-action="delete-photo"]');
+
+        if (urlInp) {
+          urlInp.dataset.pindex = newPIdx;
+          urlInp.dataset.artIndex = artIdx;
+        }
+        if (capInp) {
+          capInp.dataset.pindex = newPIdx;
+          capInp.dataset.artIndex = artIdx;
+        }
+        if (fileInp) {
+          fileInp.dataset.photoIndex = newPIdx;
+          fileInp.dataset.artIndex = artIdx;
+        }
+        if (delBtn) {
+          delBtn.dataset.photoIndex = newPIdx;
+          delBtn.dataset.artIndex = artIdx;
+        }
+      });
+
+      if (countLabel) {
+        countLabel.textContent = `Fotoğraflar (${currentIssue.articles[artIdx].photos.length})`;
+      }
+    }
+  }
+
+  queuePreviewRender();
+}
+
+/**
+ * Non-destructive: Appends a new article card without destroying existing ones
+ */
+function addNewArticle() {
+  if (!currentIssue.articles) currentIssue.articles = [];
+
+  const newIndex = currentIssue.articles.length;
+  const newArtId = `art-${String(newIndex + 1).padStart(2, '0')}`;
+  const newArticle = {
+    id: newArtId,
+    category: 'Kulüpten Haberler',
+    date: `1 ${currentIssue.month || 'Eylül'} ${currentIssue.year || 2026}`,
+    title: 'Yeni Etkinlik & Toplantı',
+    venue: 'Grand Hyatt İstanbul Taksim',
+    summary: 'Yeni etkinliğin veya projenin açıklaması buraya yazılacaktır.',
+    layout: 'two-col',
+    photos: []
+  };
+
+  currentIssue.articles.push(newArticle);
+
+  const container = document.getElementById('articles-container');
+  if (container) {
+    const newCard = createArticleCardElement(newArticle, newIndex, false);
+    container.appendChild(newCard);
+
+    // Smooth scroll to new card
+    newCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    // Focus title input immediately
+    const titleInput = newCard.querySelector('.art-field[data-field="title"]');
+    if (titleInput) {
+      titleInput.focus();
+      titleInput.select();
+    }
+  }
+
+  queuePreviewRender();
+}
+
+/**
+ * Non-destructive: Deletes an article card and re-indexes remaining cards
+ */
+function deleteArticle(idx) {
+  if (!confirm(`Haber #${idx + 1} bültenden silinsin mi?`)) return;
+
+  currentIssue.articles.splice(idx, 1);
+
+  const container = document.getElementById('articles-container');
+  if (!container) return;
+
+  const cardToRemove = container.querySelector(`.article-card-item[data-index="${idx}"]`);
+  if (cardToRemove) {
+    cardToRemove.remove();
+  }
+
+  // Re-index remaining article cards
+  const remainingCards = container.querySelectorAll('.article-card-item');
+  remainingCards.forEach((card, newIdx) => {
+    card.dataset.index = newIdx;
+    const art = currentIssue.articles[newIdx];
+    const displayTitle = art.title ? (art.title.length > 28 ? art.title.substring(0, 28) + '...' : art.title) : 'Başlıksız Haber';
+
+    // Update header index and title
+    const headerTitleSpan = card.querySelector('.article-num-title');
+    if (headerTitleSpan) {
+      headerTitleSpan.innerHTML = `<span>📄</span> Haber #${newIdx + 1}: <span class="article-title-preview">${escapeHtml(displayTitle)}</span>`;
+    }
+
+    // Update delete button index
+    const delBtn = card.querySelector('[data-action="delete-article"]');
+    if (delBtn) delBtn.dataset.index = newIdx;
+
+    // Update header toggle index
+    const header = card.querySelector('.article-card-header');
+    if (header) header.dataset.index = newIdx;
+
+    // Update Bento switcher
+    const switcher = card.querySelector('.bento-switcher');
+    if (switcher) switcher.dataset.artIndex = newIdx;
+
+    // Update add photo button
+    const addPhotoBtn = card.querySelector('[data-action="add-photo"]');
+    if (addPhotoBtn) addPhotoBtn.dataset.artIndex = newIdx;
+
+    // Update photos list
+    const photosList = card.querySelector('.photos-list');
+    if (photosList) photosList.dataset.artIndex = newIdx;
+
+    // Update photo inputs
+    const photoRows = card.querySelectorAll('.photo-item-row');
+    photoRows.forEach(row => {
+      const urlInp = row.querySelector('.photo-url-input');
+      const capInp = row.querySelector('.photo-caption-input');
+      const fileInp = row.querySelector('.hidden-file-input');
+      const photoDelBtn = row.querySelector('[data-action="delete-photo"]');
+
+      if (urlInp) urlInp.dataset.artIndex = newIdx;
+      if (capInp) capInp.dataset.artIndex = newIdx;
+      if (fileInp) fileInp.dataset.artIndex = newIdx;
+      if (photoDelBtn) photoDelBtn.dataset.artIndex = newIdx;
+    });
+  });
+
+  queuePreviewRender();
 }
 
 function escapeHtml(str) {
@@ -363,6 +820,20 @@ function renderLivePreview() {
     // Run Real-Time A4 Height Boundary Overflow Detection (297mm threshold)
     checkA4PageOverflow(renderedPages);
 
+    // Asynchronously re-check overflow when slow-loading images finish loading
+    const images = mountContainer.querySelectorAll('img');
+    images.forEach(img => {
+      if (!img.complete) {
+        const onImgDone = () => checkA4PageOverflow();
+        img.addEventListener('load', onImgDone, { once: true });
+        img.addEventListener('error', onImgDone, { once: true });
+      }
+    });
+
+    // Update Reader Mode Navigation dropdown and observer
+    updateReaderPageDropdown(renderedPages.length, currentIssue);
+    setupReaderObserver();
+
     // Reapply current zoom
     applyZoom();
   } catch (err) {
@@ -373,51 +844,76 @@ function renderLivePreview() {
 /**
  * Real-Time A4 Overflow Detection:
  * Validates that each rendered page DOM element strictly fits within the 297mm height boundary.
- * Displays prominent visual warning banners and alert badges if content spills beyond A4 dimensions.
+ * CRITICAL FIX: Removes previous warning banners and indicators BEFORE measuring scrollHeight and clientHeight
+ * to prevent persistent false-positive measurements.
+ * Displays floating non-displacing warning pill and clickable top-bar alert badge if content exceeds A4 limits.
  */
 function checkA4PageOverflow(pages) {
+  if (!pages || pages.length === 0) pages = document.querySelectorAll('.a4-page');
   if (!pages || pages.length === 0) return;
 
   let totalOverflows = 0;
   const overflowStatusBadge = document.getElementById('overflow-status-badge');
 
   pages.forEach((page, idx) => {
-    // In CSS, .a4-page is 210mm x 297mm with overflow: hidden
-    // scrollHeight > clientHeight indicates content exceeds the 297mm physical page limit
-    const pageHeight = page.clientHeight;
-    const contentHeight = page.scrollHeight;
     const pageNumber = idx + 1;
 
-    // Remove any previous overflow warnings
+    // 1. CRITICAL: Clean up previous overflow classes and warning elements FIRST
     page.classList.remove('page-overflow');
-    const existingBanner = page.querySelector('.overflow-warning-banner');
-    if (existingBanner) existingBanner.remove();
+    const existingIndicators = page.querySelectorAll('.overflow-warning-banner, .page-overflow-indicator');
+    existingIndicators.forEach(el => el.remove());
 
-    // 297mm height check with 3px sub-pixel tolerance
-    const isOverflowing = contentHeight > pageHeight + 3;
+    // 2. Measure genuine magazine content dimensions without any UI injection artifacts
+    // In CSS, .a4-page is 210mm x 297mm with overflow: hidden, and internal pages wrap content in .page-inner (also overflow: hidden).
+    // We inspect both .a4-page and .page-inner to catch clipped content.
+    const inner = page.querySelector ? page.querySelector('.page-inner') : null;
+    const pageOverflow = page.scrollHeight - page.clientHeight;
+    const innerOverflow = inner ? (inner.scrollHeight - inner.clientHeight) : 0;
+    const maxOverflow = Math.max(pageOverflow, innerOverflow);
+
+    // 297mm height check with 3px sub-pixel tolerance across both outer page and inner container
+    const isOverflowing = maxOverflow > 3;
 
     if (isOverflowing) {
       totalOverflows++;
       page.classList.add('page-overflow');
 
-      // Prepend prominent warning banner inside the overflowing page
-      const warningBanner = document.createElement('div');
-      warningBanner.className = 'overflow-warning-banner';
-      warningBanner.innerHTML = `⚠️ DİKKAT: Sayfa ${pageNumber} A4 sınırını (297mm) aşıyor! (+${contentHeight - pageHeight}px taşma) Lütfen metni kısaltın veya fotoğraf düzenini Bento formatında ayarlayın.`;
-      page.prepend(warningBanner);
+      const overflowPx = maxOverflow;
+
+      // Refined warning presentation: Floating, absolutely positioned badge (non-displacing)
+      // Never shifts magazine header, articles, or footer; hidden in print via .no-print
+      const indicator = document.createElement('div');
+      indicator.className = 'page-overflow-indicator no-print';
+      indicator.title = `Sayfa ${pageNumber} A4 sınırını (297mm) aşıyor (+${overflowPx}px). Metni kısaltın veya Bento düzenini değiştirin.`;
+      indicator.innerHTML = `<span>⚠️</span> <span>Sayfa ${pageNumber}: +${overflowPx}px A4 Taşması</span>`;
+      page.appendChild(indicator);
     }
   });
 
-  // Update Top Navigation Bar Overflow Status Badge
+  // 3. Update Top Navigation Bar Overflow Status Badge with Click-to-Scroll UX
   if (overflowStatusBadge) {
     if (totalOverflows > 0) {
       overflowStatusBadge.className = 'overflow-status-badge has-overflow';
       overflowStatusBadge.innerHTML = `<span>⚠️</span> <span>${totalOverflows} Sayfada A4 Taşması!</span>`;
-      overflowStatusBadge.title = 'Bülten sayfalarından en az biri 297mm yüksekliğini aşıyor.';
+      overflowStatusBadge.title = 'Taşan sayfaya gitmek için tıklayın.';
+      overflowStatusBadge.style.cursor = 'pointer';
+      overflowStatusBadge.onclick = () => {
+        const overflowPages = Array.from(document.querySelectorAll('.a4-page.page-overflow'));
+        if (overflowPages.length === 0) return;
+        overflowCycleIndex = overflowCycleIndex % overflowPages.length;
+        const targetPage = overflowPages[overflowCycleIndex];
+        if (targetPage && typeof targetPage.scrollIntoView === 'function') {
+          targetPage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        overflowCycleIndex = (overflowCycleIndex + 1) % overflowPages.length;
+      };
     } else {
+      overflowCycleIndex = 0;
       overflowStatusBadge.className = 'overflow-status-badge';
       overflowStatusBadge.innerHTML = `<span>✅</span> <span>A4 Sınırında</span>`;
       overflowStatusBadge.title = 'Tüm bülten sayfaları A4 (210mm x 297mm) sınırına uygundur.';
+      overflowStatusBadge.style.cursor = 'default';
+      overflowStatusBadge.onclick = null;
     }
   }
 }
@@ -459,54 +955,307 @@ function applyZoom() {
   });
 }
 
+/* =============================================================
+ * Bulletin Reader Mode & Navigation Controller Functions
+ * ============================================================= */
+
 /**
- * Saves current issue to disk via PUT /api/issues/:id
+ * Toggles between Editor Mode and Reader Mode
+ */
+function setViewMode(mode) {
+  const isReader = mode === 'reader';
+  document.body.classList.toggle('mode-reader-active', isReader);
+  document.querySelector('.studio-workspace')?.classList.toggle('mode-reader-active', isReader);
+
+  const btnEditor = document.getElementById('btn-mode-editor');
+  const btnReader = document.getElementById('btn-mode-reader');
+  if (btnEditor) {
+    btnEditor.classList.toggle('active', !isReader);
+    btnEditor.setAttribute('aria-selected', String(!isReader));
+  }
+  if (btnReader) {
+    btnReader.classList.toggle('active', isReader);
+    btnReader.setAttribute('aria-selected', String(isReader));
+  }
+
+  // Recalculate zoom scale to fit the expanded or restored viewport width
+  setTimeout(() => {
+    applyZoom();
+  }, 100);
+}
+
+/**
+ * Scrolls the preview smoothly to a specified 1-indexed A4 page
+ * Guarded by isNavigating flag to prevent intermediate observer triggers during smooth scrolling
+ */
+function scrollToPage(pageIndex) {
+  const pages = document.querySelectorAll('.a4-page');
+  if (!pages || pages.length === 0) return;
+  const targetIndex = Math.max(1, Math.min(pageIndex, pages.length)) - 1;
+  const targetPage = pages[targetIndex];
+  if (targetPage) {
+    isNavigating = true;
+    if (navigationTimer) clearTimeout(navigationTimer);
+    if (typeof targetPage.scrollIntoView === 'function') {
+      targetPage.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    updateReaderPageIndicator(targetIndex + 1, pages.length);
+    navigationTimer = setTimeout(() => {
+      isNavigating = false;
+    }, 600);
+  }
+}
+
+/**
+ * Updates page counter indicator and jump dropdown value
+ */
+function updateReaderPageIndicator(current, total = null) {
+  currentReaderPage = current;
+  const curEl = document.getElementById('reader-page-current');
+  const totalEl = document.getElementById('reader-page-total');
+  const jumpSelect = document.getElementById('reader-page-jump-select');
+
+  if (curEl) curEl.textContent = `Sayfa ${current}`;
+  if (totalEl && total) totalEl.textContent = total;
+  if (jumpSelect && jumpSelect.value !== String(current)) {
+    jumpSelect.value = String(current);
+  }
+}
+
+/**
+ * Populates page jump select options dynamically from rendered pages
+ */
+function updateReaderPageDropdown(pagesCount, issue) {
+  const jumpSelect = document.getElementById('reader-page-jump-select');
+  if (!jumpSelect) return;
+  jumpSelect.innerHTML = '';
+
+  for (let i = 1; i <= pagesCount; i++) {
+    const opt = document.createElement('option');
+    opt.value = i;
+    let label = `Sayfa ${i}`;
+    if (i === 1) {
+      label = '1. Kapak & Resmî Künye';
+    } else if (i === 2) {
+      label = '2. Başkan Mesajı & Takvim';
+    } else if (i === pagesCount - 1) {
+      label = `${i}. Galata Kültür & Kitap`;
+    } else if (i === pagesCount) {
+      label = `${i}. Arka Kapak (Polio)`;
+    } else {
+      const artIdx = i - 3;
+      if (issue?.articles && issue.articles[artIdx]) {
+        const title = issue.articles[artIdx].title || 'Kulüpten Haberler';
+        label = `${i}. ${title.length > 22 ? title.slice(0, 22) + '…' : title}`;
+      } else {
+        label = `${i}. Kulüpten Haberler`;
+      }
+    }
+    opt.textContent = label;
+    jumpSelect.appendChild(opt);
+  }
+  updateReaderPageIndicator(currentReaderPage, pagesCount);
+}
+
+/**
+ * Sets up IntersectionObserver for automatic scroll-synced page detection
+ */
+function setupReaderObserver() {
+  if (readerPageObserver) {
+    readerPageObserver.disconnect();
+  }
+  const pages = document.querySelectorAll('.a4-page');
+  const viewport = document.getElementById('preview-viewport');
+  if (!pages || pages.length === 0 || !viewport) return;
+
+  readerPageObserver = new IntersectionObserver((entries) => {
+    if (isNavigating) return;
+
+    let bestEntry = null;
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        if (!bestEntry || entry.intersectionRatio > bestEntry.intersectionRatio) {
+          bestEntry = entry;
+        }
+      }
+    });
+
+    if (bestEntry && bestEntry.isIntersecting) {
+      const pageNum = parseInt(bestEntry.target.dataset.pageIndex, 10);
+      if (pageNum) {
+        updateReaderPageIndicator(pageNum, pages.length);
+      }
+    }
+  }, {
+    root: viewport,
+    threshold: 0.4
+  });
+
+  pages.forEach(page => readerPageObserver.observe(page));
+}
+
+/**
+ * Fullscreen API toggle
+ */
+function toggleFullScreen() {
+  const fsBtn = document.getElementById('btn-fullscreen-toggle');
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().then(() => {
+      if (fsBtn) {
+        fsBtn.classList.add('fullscreen-active');
+        const icon = fsBtn.querySelector('.fullscreen-icon');
+        const txt = fsBtn.querySelector('.fullscreen-text');
+        if (icon) icon.textContent = '🗗';
+        if (txt) txt.textContent = 'Tam Ekrandan Çık';
+      }
+    }).catch(err => console.warn('Fullscreen error:', err));
+  } else {
+    if (document.exitFullscreen) {
+      document.exitFullscreen().then(() => {
+        if (fsBtn) {
+          fsBtn.classList.remove('fullscreen-active');
+          const icon = fsBtn.querySelector('.fullscreen-icon');
+          const txt = fsBtn.querySelector('.fullscreen-text');
+          if (icon) icon.textContent = '⛶';
+          if (txt) txt.textContent = 'Tam Ekran';
+        }
+      }).catch(err => console.warn('Fullscreen error:', err));
+    }
+  }
+}
+
+/**
+ * Generates and triggers a direct browser file download for JSON content
+ */
+function downloadJSON(data, filename) {
+  const jsonStr = JSON.stringify(data, null, 2);
+  const blob = new Blob([jsonStr], { type: 'application/json; charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename || `${(currentIssue && currentIssue.id) || 'bulten'}.json`;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, 200);
+}
+
+/**
+ * Validates corporate rules prior to persistence (Turkish-resilient regex)
+ */
+function validateIssueBeforeSave(data) {
+  const serialized = JSON.stringify(data);
+  if (FORBIDDEN_THEME_REGEX.test(serialized) || hasForbiddenBrandDeep(data)) {
+    throw new Error('Kurumsal Kimlik İhlali: "Rotary Sihri" ifadesi kesinlikle kullanılamaz! Tema "KALICI ETKİ YARAT" olmalıdır.');
+  }
+}
+
+/**
+ * Saves current issue:
+ * - Local Mode: Sends PUT /api/issues/:id to write to filesystem.
+ * - Static Mode: Persists in localStorage and offers direct "JSON İndir".
  */
 async function saveCurrentIssue() {
   if (!currentIssue || !currentIssue.id) return;
   syncModelFromForms();
 
   try {
-    const res = await fetch(`/api/issues/${encodeURIComponent(currentIssue.id)}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify(currentIssue, null, 2)
-    });
+    validateIssueBeforeSave(currentIssue);
+  } catch (valErr) {
+    showToast(valErr.message, 'error');
+    return;
+  }
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Kaydetme işlemi başarısız.');
+  if (activeRuntimeMode === 'local') {
+    try {
+      const res = await fetch(`/api/issues/${encodeURIComponent(currentIssue.id)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
+        body: JSON.stringify(currentIssue, null, 2)
+      });
 
-    showToast('Bülten başarıyla kaydedildi!', 'success');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Kaydetme işlemi başarısız.');
+
+      showToast('Bülten sunucuya başarıyla kaydedildi!', 'success');
+      renderLivePreview();
+      return;
+    } catch (err) {
+      console.warn('Yerel sunucuya kaydedilemedi, localStorage moduna geçiliyor:', err.message);
+    }
+  }
+
+  // Static Mode Persistence
+  try {
+    const key = `galata_issue_${currentIssue.id}`;
+    localStorage.setItem(key, JSON.stringify(currentIssue, null, 2));
+    localStorage.setItem(`galata_issue_timestamp_${currentIssue.id}`, new Date().toISOString());
+
+    showToast('Değişiklikler tarayıcı hafızasına (localStorage) kaydedildi! "JSON İndir" ile dosyayı alabilirsiniz.', 'success');
     renderLivePreview();
+    updateIssueSelectOption(currentIssue.id, true);
   } catch (err) {
     showToast(`Kaydetme Hatası: ${err.message}`, 'error');
   }
 }
 
+function updateIssueSelectOption(issueId, isModified) {
+  const selector = document.getElementById('issue-select');
+  if (!selector) return;
+  const opt = Array.from(selector.options).find(o => o.value === issueId);
+  if (opt && isModified && !opt.textContent.includes('✏️')) {
+    opt.textContent += ' ✏️';
+  }
+}
+
 /**
- * Exports current issue to high-quality print PDF via POST /api/export-pdf/:id
+ * Dual-Mode PDF Export:
+ * - Local Mode: Calls POST /api/export-pdf/:id to execute headless Chrome CLI.
+ * - Static Mode: Opens or downloads the pre-rendered official PDF from output/*.pdf.
+ *   Provides window.print() as an additional interactive fallback for custom changes.
  */
 async function exportPdf() {
   if (!currentIssue || !currentIssue.id) return;
   await saveCurrentIssue();
 
-  showToast('Chrome Headless PDF motoru çalıştırılıyor... Lütfen bekleyin.', 'info');
+  if (activeRuntimeMode === 'local') {
+    showToast('Chrome Headless PDF motoru çalıştırılıyor... Lütfen bekleyin.', 'info');
+    try {
+      const res = await fetch(`/api/export-pdf/${encodeURIComponent(currentIssue.id)}`, {
+        method: 'POST'
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'PDF üretilemedi.');
 
-  try {
-    const res = await fetch(`/api/export-pdf/${encodeURIComponent(currentIssue.id)}`, {
-      method: 'POST'
-    });
-
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'PDF üretilemedi.');
-
-    showToast('A4 PDF başarıyla üretildi!', 'success');
-    if (data.outputPdf) {
-      // Open in new tab or trigger download
-      window.open(data.outputPdf, '_blank');
+      showToast('A4 PDF başarıyla üretildi!', 'success');
+      if (data.outputPdf) {
+        window.open(data.outputPdf, '_blank');
+      }
+      return;
+    } catch (err) {
+      console.warn('Yerel PDF export başarısız, statik PDF moduna geçiliyor:', err.message);
     }
-  } catch (err) {
-    showToast(`PDF Üretim Hatası: ${err.message}`, 'error');
+  }
+
+  // Static Mode PDF Routing
+  const officialPdfName = ISSUE_PDF_MAP[currentIssue.id];
+  if (officialPdfName) {
+    const pdfUrl = resolveAppPath(`output/${officialPdfName}`);
+    showToast('Resmî baskı PDF dosyası indiriliyor...', 'info');
+
+    const a = document.createElement('a');
+    a.href = pdfUrl;
+    a.download = officialPdfName;
+    a.target = '_blank';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => document.body.removeChild(a), 200);
+  } else {
+    // Fallback for custom user-created months that do not have pre-rendered PDFs
+    showToast('Önceden üretilmiş PDF bulunamadı. Canlı tarayıcı yazdırma aracı açılıyor (PDF Olarak Kaydet seçeneğini kullanınız).', 'info');
+    setTimeout(() => window.print(), 500);
   }
 }
 
@@ -528,21 +1277,45 @@ async function syncWithRotaClub() {
 }
 
 /**
- * Handles image file upload via POST /api/upload
+ * Converts a File object into a Base64 Data URL (used in static mode and offline)
+ */
+function readImageAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    if (!file.type.startsWith('image/')) {
+      return reject(new Error('Lütfen geçerli bir görsel dosyası seçin (JPEG, PNG, WebP).'));
+    }
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error('Görsel dosyası okunamadı.'));
+    reader.readAsDataURL(file);
+  });
+}
+
+/**
+ * Handles image file upload via POST /api/upload in local mode,
+ * or Base64 Data URL conversion via FileReader in static mode.
  */
 async function uploadImageFile(file, issueFolder) {
-  const formData = new FormData();
-  formData.append('photo', file);
-  formData.append('issue', issueFolder || (currentIssue ? currentIssue.id : '2026-09'));
+  if (activeRuntimeMode === 'local') {
+    try {
+      const formData = new FormData();
+      formData.append('photo', file);
+      formData.append('issue', issueFolder || (currentIssue ? currentIssue.id : '2026-09'));
 
-  const res = await fetch(`/api/upload?issue=${encodeURIComponent(issueFolder || '')}`, {
-    method: 'POST',
-    body: formData
-  });
+      const res = await fetch(`/api/upload?issue=${encodeURIComponent(issueFolder || '')}`, {
+        method: 'POST',
+        body: formData
+      });
 
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Görsel yüklenemedi.');
-  return data.url;
+      const data = await res.json();
+      if (res.ok && data.url) return data.url;
+    } catch (err) {
+      console.warn('Sunucuya görsel yüklenemedi, Base64 Data URL moduna geçiliyor:', err.message);
+    }
+  }
+
+  // Static Mode or Offline Fallback: Convert to Base64 Data URL
+  return await readImageAsDataUrl(file);
 }
 
 /**
@@ -612,14 +1385,52 @@ document.addEventListener('DOMContentLoaded', () => {
     editorPane.addEventListener('change', queuePreviewRender);
   }
 
-  // 5. Action Buttons
+  // 5. Action Buttons & Export Controls
   document.getElementById('btn-save')?.addEventListener('click', saveCurrentIssue);
+  document.getElementById('btn-download-json')?.addEventListener('click', () => {
+    if (!currentIssue) return;
+    syncModelFromForms();
+    downloadJSON(currentIssue, `${currentIssue.id || 'bulten'}.json`);
+    showToast('Bülten JSON dosyası indirildi!', 'success');
+  });
+
+  document.getElementById('btn-reset-issue')?.addEventListener('click', async () => {
+    if (!currentIssue || !currentIssue.id) return;
+    if (confirm(`"${currentIssue.month} ${currentIssue.year}" sayısının yerel değişiklikleri silinip orijinal versiyonuna dönülsün mü?`)) {
+      localStorage.removeItem(`galata_issue_${currentIssue.id}`);
+      localStorage.removeItem(`galata_issue_timestamp_${currentIssue.id}`);
+      showToast('Yerel değişiklikler temizlendi, orijinal bülten yükleniyor...', 'info');
+      await selectIssue(currentIssue.id);
+      await loadIssuesList(currentIssue.id);
+    }
+  });
+
   document.getElementById('btn-export-pdf')?.addEventListener('click', exportPdf);
   document.getElementById('btn-print')?.addEventListener('click', () => window.print());
   document.getElementById('btn-rotaclub-sync')?.addEventListener('click', syncWithRotaClub);
   document.getElementById('btn-refresh-preview')?.addEventListener('click', renderLivePreview);
 
-  // 6. New Month Initializer Modal
+  // 6. View Mode Switcher Listeners
+  document.getElementById('btn-mode-editor')?.addEventListener('click', () => setViewMode('editor'));
+  document.getElementById('btn-mode-reader')?.addEventListener('click', () => setViewMode('reader'));
+
+  // 7. Reader Navigation Listeners
+  document.getElementById('btn-prev-page')?.addEventListener('click', () => {
+    if (currentReaderPage > 1) scrollToPage(currentReaderPage - 1);
+  });
+
+  document.getElementById('btn-next-page')?.addEventListener('click', () => {
+    const total = document.querySelectorAll('.a4-page').length;
+    if (currentReaderPage < total) scrollToPage(currentReaderPage + 1);
+  });
+
+  document.getElementById('reader-page-jump-select')?.addEventListener('change', (e) => {
+    scrollToPage(parseInt(e.target.value, 10));
+  });
+
+  document.getElementById('btn-fullscreen-toggle')?.addEventListener('click', toggleFullScreen);
+
+  // 8. New Month Initializer Modal
   document.getElementById('btn-new-issue')?.addEventListener('click', openNewIssueModal);
   document.getElementById('btn-close-modal')?.addEventListener('click', closeNewIssueModal);
   document.getElementById('btn-cancel-modal')?.addEventListener('click', closeNewIssueModal);
@@ -638,43 +1449,46 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // 7. Dynamic Article Card Delegation
+  // 9. Dynamic Article Card Delegation (Non-destructive & Accordion enabled)
   if (editorPane) {
     editorPane.addEventListener('click', async (e) => {
-      const target = e.target.closest('button, label');
-      if (!target) return;
-
-      // Delete Article
-      if (target.dataset.action === 'delete-article') {
-        const idx = parseInt(target.dataset.index, 10);
-        if (confirm(`Haber #${idx + 1} bültenden silinsin mi?`)) {
-          currentIssue.articles.splice(idx, 1);
-          renderArticleCards();
-          queuePreviewRender();
+      // Accordion Toggle
+      const header = e.target.closest('.article-card-header');
+      if (header && !e.target.closest('.article-delete-btn')) {
+        const card = header.closest('.article-card-item');
+        if (card) {
+          card.classList.toggle('is-collapsed');
+          const chevron = card.querySelector('.card-chevron');
+          if (chevron) {
+            chevron.textContent = card.classList.contains('is-collapsed') ? '►' : '▼';
+          }
         }
         return;
       }
 
-      // Add Photo to Article
-      if (target.dataset.action === 'add-photo') {
-        const artIdx = parseInt(target.dataset.artIndex, 10);
-        if (!currentIssue.articles[artIdx].photos) currentIssue.articles[artIdx].photos = [];
-        currentIssue.articles[artIdx].photos.push({
-          url: 'assets/brand/galata-silhouette.svg',
-          caption: 'Yeni Fotoğraf Açıklaması'
-        });
-        renderArticleCards();
-        queuePreviewRender();
+      const target = e.target.closest('button, label');
+      if (!target) return;
+
+      // Delete Article (Surgical)
+      if (target.dataset.action === 'delete-article') {
+        e.stopPropagation();
+        const idx = parseInt(target.dataset.index, 10);
+        deleteArticle(idx);
         return;
       }
 
-      // Delete Photo from Article
+      // Add Photo to Article (Surgical)
+      if (target.dataset.action === 'add-photo') {
+        const artIdx = parseInt(target.dataset.artIndex, 10);
+        addPhotoToArticle(artIdx);
+        return;
+      }
+
+      // Delete Photo from Article (Surgical)
       if (target.dataset.action === 'delete-photo') {
         const artIdx = parseInt(target.dataset.artIndex, 10);
         const pIdx = parseInt(target.dataset.photoIndex, 10);
-        currentIssue.articles[artIdx].photos.splice(pIdx, 1);
-        renderArticleCards();
-        queuePreviewRender();
+        deletePhotoFromArticle(artIdx, pIdx);
         return;
       }
 
@@ -684,38 +1498,54 @@ document.addEventListener('DOMContentLoaded', () => {
         const switcher = target.closest('.bento-switcher');
         const artIdx = parseInt(switcher.dataset.artIndex, 10);
 
-        currentIssue.articles[artIdx].layout = layout;
+        if (currentIssue.articles && currentIssue.articles[artIdx]) {
+          currentIssue.articles[artIdx].layout = layout;
+        }
 
         switcher.querySelectorAll('.bento-option-btn').forEach(b => b.classList.remove('active'));
         target.classList.add('active');
+
+        // Update badge on card header in-place
+        const card = switcher.closest('.article-card-item');
+        const badge = card?.querySelector('.article-bento-badge');
+        if (badge) badge.textContent = layout;
 
         queuePreviewRender();
         return;
       }
     });
 
-    // Article Fields Input Sync
+    // Article Fields Input Sync (with live card header title synchronization)
     editorPane.addEventListener('input', (e) => {
       const field = e.target.dataset.field;
       if (field) {
         const card = e.target.closest('.article-card-item');
         if (card) {
           const idx = parseInt(card.dataset.index, 10);
-          if (currentIssue.articles[idx]) {
+          if (currentIssue.articles && currentIssue.articles[idx]) {
             currentIssue.articles[idx][field] = e.target.value;
+
+            // Live synchronization of card header title
+            if (field === 'title') {
+              const previewSpan = card.querySelector('.article-title-preview');
+              if (previewSpan) {
+                const val = e.target.value.trim();
+                previewSpan.textContent = val ? (val.length > 28 ? val.substring(0, 28) + '...' : val) : 'Başlıksız Haber';
+              }
+            }
           }
         }
         return;
       }
 
-      // Photo Inputs Sync
+      // Photo Inputs Sync (In-place without re-rendering)
       if (e.target.classList.contains('photo-url-input') || e.target.classList.contains('photo-caption-input')) {
         const row = e.target.closest('.photo-item-row');
         const card = e.target.closest('.article-card-item');
         if (row && card) {
           const artIdx = parseInt(card.dataset.index, 10);
           const pIdx = parseInt(row.dataset.photoIndex, 10);
-          if (currentIssue.articles[artIdx] && currentIssue.articles[artIdx].photos[pIdx]) {
+          if (currentIssue.articles && currentIssue.articles[artIdx] && currentIssue.articles[artIdx].photos[pIdx]) {
             if (e.target.classList.contains('photo-url-input')) {
               currentIssue.articles[artIdx].photos[pIdx].url = e.target.value;
               const thumb = row.querySelector('.photo-preview-thumb');
@@ -728,7 +1558,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // File Upload Inputs
+    // File Upload Inputs (Surgical in-place update)
     editorPane.addEventListener('change', async (e) => {
       if (e.target.classList.contains('hidden-file-input') && e.target.files.length > 0) {
         const file = e.target.files[0];
@@ -746,12 +1576,22 @@ document.addEventListener('DOMContentLoaded', () => {
               queuePreviewRender();
             }
           } else {
-            // Article photo upload
+            // Article photo upload (In-place update without rebuilding cards)
             const artIdx = parseInt(e.target.dataset.artIndex, 10);
             const pIdx = parseInt(e.target.dataset.photoIndex, 10);
-            if (currentIssue.articles[artIdx] && currentIssue.articles[artIdx].photos[pIdx]) {
+            if (currentIssue.articles && currentIssue.articles[artIdx] && currentIssue.articles[artIdx].photos[pIdx]) {
               currentIssue.articles[artIdx].photos[pIdx].url = uploadedUrl;
-              renderArticleCards();
+
+              const card = document.querySelector(`.article-card-item[data-index="${artIdx}"]`);
+              if (card) {
+                const row = card.querySelector(`.photo-item-row[data-photo-index="${pIdx}"]`);
+                if (row) {
+                  const urlInp = row.querySelector('.photo-url-input');
+                  const thumb = row.querySelector('.photo-preview-thumb');
+                  if (urlInp) urlInp.value = uploadedUrl;
+                  if (thumb) thumb.src = uploadedUrl;
+                }
+              }
               queuePreviewRender();
             }
           }
@@ -764,25 +1604,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Add Article Button
-  document.getElementById('btn-add-article')?.addEventListener('click', () => {
-    if (!currentIssue.articles) currentIssue.articles = [];
-    const newArtId = `art-${String(currentIssue.articles.length + 1).padStart(2, '0')}`;
-    currentIssue.articles.push({
-      id: newArtId,
-      category: 'Kulüpten Haberler',
-      date: `1 ${currentIssue.month || 'Eylül'} ${currentIssue.year || 2026}`,
-      title: 'Yeni Etkinlik & Toplantı',
-      venue: 'Grand Hyatt İstanbul Taksim',
-      summary: 'Yeni etkinliğin veya projenin açıklaması buraya yazılacaktır.',
-      layout: 'two-col',
-      photos: []
-    });
-    renderArticleCards();
-    queuePreviewRender();
-  });
+  // Hook Add Article Button to non-destructive addNewArticle
+  document.getElementById('btn-add-article')?.addEventListener('click', addNewArticle);
 
-  // 8. Zoom Controls
+  // 10. Zoom Controls
   document.getElementById('btn-zoom-fit')?.addEventListener('click', () => {
     isFitMode = true;
     applyZoom();
@@ -802,19 +1627,62 @@ document.addEventListener('DOMContentLoaded', () => {
     applyZoom();
   });
 
+  // Ctrl + MouseWheel Zooming on #preview-viewport
+  const previewViewport = document.getElementById('preview-viewport');
+  if (previewViewport) {
+    previewViewport.addEventListener('wheel', (e) => {
+      if (e.ctrlKey) {
+        e.preventDefault();
+        isFitMode = false;
+        const zoomDelta = e.deltaY < 0 ? 0.05 : -0.05;
+        currentZoom = Math.min(2.0, Math.max(0.4, Math.round((currentZoom + zoomDelta) * 100) / 100));
+        applyZoom();
+      }
+    }, { passive: false });
+  }
+
   window.addEventListener('resize', () => {
     if (isFitMode) applyZoom();
   });
 
-  // 9. Keyboard Shortcuts
+  // 11. Keyboard Shortcuts & Reader Mode Navigation
   window.addEventListener('keydown', (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
       e.preventDefault();
       saveCurrentIssue();
+      return;
     }
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'p') {
       e.preventDefault();
       window.print();
+      return;
+    }
+
+    // Reader Mode Keyboard Navigation
+    const activeEl = document.activeElement;
+    const isInputFocused = activeEl && (
+      activeEl.tagName === 'INPUT' ||
+      activeEl.tagName === 'TEXTAREA' ||
+      activeEl.isContentEditable ||
+      activeEl.getAttribute('contenteditable') === 'true'
+    );
+
+    if (!isInputFocused) {
+      const isReaderActive = document.body.classList.contains('mode-reader-active');
+      if (isReaderActive) {
+        if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+          e.preventDefault();
+          if (currentReaderPage > 1) {
+            scrollToPage(currentReaderPage - 1);
+          }
+        } else if (e.key === 'ArrowRight' || e.key === 'PageDown') {
+          e.preventDefault();
+          const total = document.querySelectorAll('.a4-page').length;
+          if (currentReaderPage < total) {
+            scrollToPage(currentReaderPage + 1);
+          }
+        }
+      }
     }
   });
 });

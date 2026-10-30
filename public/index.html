@@ -38,6 +38,22 @@
       <div id="overflow-status-badge" class="overflow-status-badge">
         <span>✅</span> <span>A4 Sınırında</span>
       </div>
+
+      <div id="runtime-mode-badge" class="runtime-mode-badge mode-local" title="Aktif Mod: Yerel Node.js API">
+        <span>🟢</span> <span>Yerel Sunucu (REST API)</span>
+      </div>
+    </div>
+
+    <!-- Segmented View Mode Switcher -->
+    <div class="studio-mode-switch no-print" role="tablist" aria-label="Görünüm Modu Seçimi">
+      <button id="btn-mode-editor" class="mode-switch-btn active" role="tab" aria-selected="true" data-mode="editor" title="Düzenleyici Modu: Mizanpaj ve Form Kontrolleri (Split-Screen)">
+        <span class="mode-icon">✏️</span>
+        <span class="mode-label">Düzenleyici</span>
+      </button>
+      <button id="btn-mode-reader" class="mode-switch-btn" role="tab" aria-selected="false" data-mode="reader" title="Dergi Okuyucu: Tam Sayfa A4 Dergi Okuma Modu">
+        <span class="mode-icon">📖</span>
+        <span class="mode-label">Dergi Okuyucu</span>
+      </button>
     </div>
 
     <div class="studio-header-actions">
@@ -45,7 +61,15 @@
         <span>💾</span> <span>Kaydet</span>
       </button>
 
-      <button id="btn-export-pdf" class="btn btn-accent" title="Chrome Headless Motoru ile Baskı Kalitesinde A4 PDF Üret">
+      <button id="btn-download-json" class="btn btn-secondary" title="Güncel Bülten Verisini JSON Olarak İndir">
+        <span>📥</span> <span>JSON İndir</span>
+      </button>
+
+      <button id="btn-reset-issue" class="btn btn-secondary" title="Yerel Değişiklikleri Sıfırla ve Orijinal Bülteni Yükle">
+        <span>↺</span> <span>Sıfırla</span>
+      </button>
+
+      <button id="btn-export-pdf" class="btn btn-accent" title="Baskı Kalitesinde A4 PDF İndir">
         <span>📄</span> <span>PDF İndir</span>
       </button>
 
@@ -294,6 +318,48 @@
           <div class="zoom-slider-container">
             <input type="range" id="zoom-slider" class="zoom-slider" min="30" max="150" value="75">
             <span id="zoom-val" class="zoom-percent-text">75%</span>
+          </div>
+        </div>
+
+        <!-- Reader Navigation & Page-Jumping Controls (Active in Reader Mode) -->
+        <div id="reader-navigation-bar" class="reader-navigation-bar no-print">
+          <div class="reader-nav-controls">
+            <button id="btn-prev-page" class="reader-nav-btn" title="Önceki Sayfa (Sol Ok / PageUp)">
+              <span>◀</span>
+              <span class="btn-text">Önceki</span>
+            </button>
+
+            <div class="reader-page-indicator" title="Geçerli Sayfa">
+              <span id="reader-page-current">Sayfa 1</span>
+              <span class="reader-page-sep">/</span>
+              <span id="reader-page-total">8</span>
+            </div>
+
+            <button id="btn-next-page" class="reader-nav-btn" title="Sonraki Sayfa (Sağ Ok / PageDown)">
+              <span class="btn-text">Sonraki</span>
+              <span>▶</span>
+            </button>
+
+            <div class="reader-jump-wrapper">
+              <label for="reader-page-jump-select" class="visually-hidden" style="display:none;">Sayfaya Git</label>
+              <select id="reader-page-jump-select" class="reader-jump-select" title="Belirli Bir Sayfaya Hızlı Geçiş Yap">
+                <option value="1">1. Kapak & Resmî Künye</option>
+                <option value="2">2. Başkan Mesajı & Takvim</option>
+                <option value="3">3. Kulüpten Haberler</option>
+                <option value="4">4. Kulüpten Haberler</option>
+                <option value="5">5. Kulüpten Haberler</option>
+                <option value="6">6. Kulüpten Haberler</option>
+                <option value="7">7. Galata Kültür & Kitap</option>
+                <option value="8">8. Arka Kapak (Polio)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="reader-mode-options">
+            <button id="btn-fullscreen-toggle" class="reader-nav-btn btn-fullscreen" title="Tam Ekran Okuma Modunu Aç/Kapat (F11)">
+              <span class="fullscreen-icon">⛶</span>
+              <span class="fullscreen-text">Tam Ekran</span>
+            </button>
           </div>
         </div>
 

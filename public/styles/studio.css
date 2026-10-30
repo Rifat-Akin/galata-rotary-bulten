@@ -443,9 +443,65 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
   margin-bottom: 12px;
   padding-bottom: 8px;
   border-bottom: 1px solid #E2E8F0;
+  transition: background 0.15s;
+}
+
+.article-card-header:hover {
+  opacity: 0.85;
+}
+
+.article-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  overflow: hidden;
+}
+
+.article-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.card-chevron {
+  font-size: 11px;
+  color: #64748B;
+  transition: transform 0.2s ease;
+  width: 14px;
+  display: inline-block;
+  text-align: center;
+}
+
+.article-bento-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #E2E8F0;
+  color: #475569;
+  text-transform: uppercase;
+}
+
+/* Collapsed State */
+.article-card-item.is-collapsed {
+  background: #FFFFFF;
+  padding-bottom: 4px;
+}
+
+.article-card-item.is-collapsed .article-card-header {
+  margin-bottom: 0;
+  padding-bottom: 4px;
+  border-bottom: none;
+}
+
+.article-card-item.is-collapsed .article-card-body {
+  display: none;
 }
 
 .article-num-title {
@@ -736,6 +792,35 @@
   gap: 8px;
 }
 
+/* Floating Non-Displacing A4 Overflow Indicator */
+.page-overflow-indicator {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: #DC2626;
+  color: #FFFFFF;
+  padding: 6px 14px;
+  border-radius: 24px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.45);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: auto;
+  cursor: help;
+  user-select: none;
+  animation: pulse-badge 2s infinite ease-in-out;
+}
+
+@keyframes pulse-badge {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}
+
 /* -------------------------------------------------------------
  * 5. Toast Notifications & Modals
  * ------------------------------------------------------------- */
@@ -861,6 +946,437 @@
   gap: 10px;
 }
 
+/* =============================================================
+ * BULLETIN READER MODE, RUNTIME BADGE & RESPONSIVE DESIGN (M1)
+ * ============================================================= */
+
+/* -------------------------------------------------------------
+ * 1. Runtime Mode Indicator
+ * ------------------------------------------------------------- */
+.runtime-mode-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid transparent;
+  user-select: none;
+}
+
+.runtime-mode-badge.mode-local {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34D399;
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.runtime-mode-badge.mode-static {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60A5FA;
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+/* -------------------------------------------------------------
+ * 2. Segmented View Mode Switcher
+ * ------------------------------------------------------------- */
+.studio-mode-switch {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(247, 168, 27, 0.35);
+  border-radius: 24px;
+  padding: 3px;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+  gap: 2px;
+}
+
+.mode-switch-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #94A3B8;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+  white-space: nowrap;
+}
+
+.mode-switch-btn:hover {
+  color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.mode-switch-btn.active {
+  background: linear-gradient(135deg, #17458F 0%, #0B2545 100%);
+  color: #FFFFFF;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  font-weight: 700;
+}
+
+#btn-mode-reader.mode-switch-btn.active {
+  background: linear-gradient(135deg, #F7A81B 0%, #D98C0A 100%);
+  color: #0B2545;
+  box-shadow: 0 2px 8px rgba(247, 168, 27, 0.4);
+}
+
+/* -------------------------------------------------------------
+ * 3. Reader Navigation Bar & Page Jumping Controls
+ * ------------------------------------------------------------- */
+.reader-navigation-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(15, 23, 42, 0.85);
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.2s ease;
+}
+
+.reader-nav-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.reader-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  background: #334155;
+  color: #F8FAFC;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.reader-nav-btn:hover {
+  background: #475569;
+  border-color: var(--studio-gold);
+  color: #FFFFFF;
+}
+
+.reader-nav-btn:active {
+  transform: translateY(1px);
+}
+
+.reader-page-indicator {
+  font-size: 12px;
+  font-weight: 700;
+  color: #FCD34D;
+  background: rgba(247, 168, 27, 0.15);
+  border: 1px solid rgba(247, 168, 27, 0.3);
+  padding: 4px 10px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.reader-page-sep {
+  color: #94A3B8;
+  font-weight: 400;
+}
+
+.reader-jump-wrapper {
+  display: flex;
+  align-items: center;
+}
+
+.reader-jump-select {
+  background: #0F172A;
+  color: #E2E8F0;
+  border: 1px solid #475569;
+  border-radius: 5px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+  max-width: 170px;
+  text-overflow: ellipsis;
+  transition: border-color 0.15s ease;
+}
+
+.reader-jump-select:focus {
+  border-color: var(--studio-gold);
+  box-shadow: 0 0 0 2px rgba(247, 168, 27, 0.2);
+}
+
+.btn-fullscreen {
+  background: #1E293B;
+  border-color: #475569;
+}
+
+.btn-fullscreen:hover {
+  background: #334155;
+  border-color: #60A5FA;
+}
+
+.btn-fullscreen.fullscreen-active {
+  background: var(--studio-blue);
+  color: #FFFFFF;
+  border-color: #93C5FD;
+}
+
+/* -------------------------------------------------------------
+ * 4. Reader Mode Immersion Styles
+ * ------------------------------------------------------------- */
+body.mode-reader-active .editor-pane,
+.studio-workspace.mode-reader-active .editor-pane {
+  display: none !important;
+}
+
+body.mode-reader-active .preview-pane,
+.studio-workspace.mode-reader-active .preview-pane {
+  width: 100% !important;
+  flex: 1 1 100% !important;
+  background-color: #07111E !important; /* Deep distraction-free museum gallery navy */
+}
+
+body.mode-reader-active .zoom-toolbar,
+.studio-workspace.mode-reader-active .zoom-toolbar {
+  background: linear-gradient(180deg, #07192F 0%, #0B2545 100%);
+  border-bottom: 1px solid rgba(247, 168, 27, 0.3);
+}
+
+body.mode-reader-active .reader-navigation-bar {
+  background: rgba(11, 37, 69, 0.9);
+  border-color: rgba(247, 168, 27, 0.4);
+}
+
+body.mode-reader-active .a4-page {
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.45) !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* -------------------------------------------------------------
+ * 5. Responsive Layout & Mobile Breakpoints (<900px, <640px)
+ * ------------------------------------------------------------- */
+
+/* Dynamic viewport height standard with fallback */
+.studio-workspace {
+  height: calc(100vh - var(--studio-header-height));
+  height: calc(100dvh - var(--studio-header-height));
+  min-height: calc(100vh - var(--studio-header-height));
+}
+
+/* Tablet & Split-to-Tab Breakpoint (< 900px) */
+@media screen and (max-width: 900px) {
+  :root {
+    --studio-header-height: auto;
+  }
+
+  .studio-header {
+    height: auto;
+    min-height: 58px;
+    padding: 8px 14px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .studio-brand {
+    gap: 10px;
+  }
+
+  .studio-logo-emblem {
+    height: 32px;
+  }
+
+  .studio-app-title {
+    font-size: 14px;
+  }
+
+  .studio-app-subtitle {
+    display: none; /* Hide subtitle to preserve header horizontal budget */
+  }
+
+  .studio-header-center {
+    order: 3;
+    width: 100%;
+    justify-content: space-between;
+    padding-top: 6px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .studio-mode-switch {
+    order: 2;
+  }
+
+  .studio-header-actions {
+    order: 4;
+    width: 100%;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  /* Single-pane Tab Switcher on Tablet: Either Editor OR Reader is shown */
+  .studio-workspace {
+    position: relative;
+    flex-direction: column;
+  }
+
+  /* When Editor Mode is Active on Tablet */
+  body:not(.mode-reader-active) .editor-pane {
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+    border-right: none;
+    flex: 1;
+    display: flex !important;
+  }
+
+  body:not(.mode-reader-active) .preview-pane {
+    display: none !important;
+  }
+
+  /* When Reader Mode is Active on Tablet */
+  body.mode-reader-active .editor-pane {
+    display: none !important;
+  }
+
+  body.mode-reader-active .preview-pane {
+    display: flex !important;
+    width: 100% !important;
+    flex: 1;
+  }
+
+  /* Toolbar adjustments */
+  .zoom-toolbar {
+    height: auto;
+    min-height: 44px;
+    padding: 6px 10px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .zoom-btn-group button:not(.active):not(#btn-zoom-fit) {
+    display: none; /* Keep only 'Sayfaya Sığdır' and active chip */
+  }
+
+  .zoom-slider-container {
+    display: none; /* Hide slider on tablet to avoid crowding */
+  }
+
+  .reader-jump-select {
+    max-width: 130px;
+  }
+}
+
+/* Mobile Phone Breakpoint (< 640px) */
+@media screen and (max-width: 640px) {
+  .studio-header {
+    padding: 6px 10px;
+    gap: 6px;
+  }
+
+  .studio-app-badge {
+    display: none;
+  }
+
+  .mode-switch-btn {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+
+  .issue-selector-wrapper {
+    padding: 4px 8px;
+  }
+
+  .issue-selector-label {
+    display: none;
+  }
+
+  .page-count-badge,
+  .overflow-status-badge {
+    font-size: 11px;
+    padding: 4px 6px;
+  }
+
+  /* Condense action buttons on mobile to icons */
+  .studio-header-actions .btn {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .studio-header-actions .btn span:not(:first-child) {
+    display: none; /* Show only emojis on narrow mobile */
+  }
+
+  /* Mobile Editor Layout */
+  .editor-tabs-bar {
+    padding: 0 4px;
+  }
+
+  .tab-btn {
+    padding: 10px 10px;
+    font-size: 11px;
+  }
+
+  .editor-scroll-area {
+    padding: 14px 10px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .form-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  /* iOS Safari 16px font-size zoom prevention */
+  .form-input,
+  .form-select,
+  .form-textarea {
+    font-size: 16px !important;
+  }
+
+  /* Bento Layout Switcher on mobile */
+  .bento-switcher {
+    flex-wrap: wrap;
+  }
+
+  .bento-option-btn {
+    flex: 1 1 45%;
+  }
+
+  /* Mobile Preview Viewport */
+  .preview-viewport {
+    padding: 12px 6px 60px 6px;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  .reader-navigation-bar {
+    width: 100%;
+    justify-content: space-between;
+    padding: 4px 6px;
+  }
+
+  .reader-nav-btn .btn-text,
+  .btn-fullscreen .fullscreen-text {
+    display: none; /* Show only icons on phones */
+  }
+
+  .reader-jump-select {
+    max-width: 110px;
+    font-size: 10px;
+  }
+}
+
 /* -------------------------------------------------------------
  * 6. Print Media Rules
  * ------------------------------------------------------------- */
@@ -870,7 +1386,11 @@
   .zoom-toolbar,
   .toast-container,
   .modal-overlay,
-  .overflow-warning-banner {
+  .overflow-warning-banner,
+  .page-overflow-indicator,
+  .reader-navigation-bar,
+  .studio-mode-switch,
+  .runtime-mode-badge {
     display: none !important;
   }
   .studio-workspace {

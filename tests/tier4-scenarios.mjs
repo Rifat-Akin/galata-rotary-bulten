@@ -116,7 +116,7 @@ export function createTier4Suites(projectRoot) {
           return { status: 'PENDING', milestone: 'M1', message: 'data/issues directory not yet created' };
         }
 
-        const files = fs.readdirSync(dataDir).filter(f => f.endsWith('.json'));
+        const files = fs.readdirSync(dataDir).filter(f => f.endsWith('.json') && f !== 'index.json');
         if (files.length === 0) {
           return { status: 'PENDING', milestone: 'M1', message: 'No issue files found in data/issues' };
         }

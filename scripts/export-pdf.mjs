@@ -40,6 +40,91 @@ const ALL_ISSUE_IDS = [
   '2026-10-ekim'
 ];
 
+// Active temporary profile directories tracked for guaranteed cleanup
+const activeTempDirs = new Set();
+
+/**
+ * Removes all active temporary profile directories
+ */
+export function cleanupAllTempDirs() {
+  for (const dir of activeTempDirs) {
+    try {
+      if (fs.existsSync(dir)) {
+        fs.rmSync(dir, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 });
+      }
+    } catch {
+      // Ignore transient errors on teardown
+    }
+  }
+  activeTempDirs.clear();
+}
+
+/**
+ * Clean up leftover temporary directories from prior interrupted runs
+ */
+export function cleanupStaleTempProfiles() {
+  try {
+    const tmp = os.tmpdir();
+    const entries = fs.readdirSync(tmp);
+    for (const entry of entries) {
+      if (entry.startsWith('galata-pdf-chrome-')) {
+        const fullPath = path.join(tmp, entry);
+        try {
+          fs.rmSync(fullPath, { recursive: true, force: true, maxRetries: 2, retryDelay: 50 });
+        } catch {
+          // May be locked by an active process
+        }
+      }
+    }
+  } catch {
+    // Ignore tmpdir readdir errors
+  }
+}
+
+// Process termination signal handlers for profile hygiene
+process.on('SIGINT', () => {
+  cleanupAllTempDirs();
+  process.exit(130);
+});
+
+process.on('SIGTERM', () => {
+  cleanupAllTempDirs();
+  process.exit(143);
+});
+
+process.on('exit', () => {
+  cleanupAllTempDirs();
+});
+
+/**
+ * Dynamic resolution of known issue identifiers from disk
+ */
+export function getKnownIssueIds() {
+  if (fs.existsSync(dataDir)) {
+    try {
+      const files = fs.readdirSync(dataDir)
+        .filter(f => f.endsWith('.json') && f !== 'index.json')
+        .map(f => f.replace(/\.json$/i, ''));
+      if (files.length > 0) return files;
+    } catch {
+      // Fallback to static list
+    }
+  }
+  return ALL_ISSUE_IDS;
+}
+
+/**
+ * Path traversal sanitization for issue identifiers
+ */
+export function sanitizeIssueId(rawId) {
+  if (!rawId || typeof rawId !== 'string') return null;
+  const base = path.basename(rawId).replace(/\.json$/i, '').trim();
+  if (!/^[a-zA-Z0-9_-]+$/.test(base)) {
+    return null;
+  }
+  return base;
+}
+
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
@@ -102,17 +187,24 @@ function createPrintServer() {
 
         // Render Issue Endpoint
         if (pathname === '/render') {
-          const issueId = parsedUrl.searchParams.get('issue');
-          if (!issueId) {
+          const rawIssueId = parsedUrl.searchParams.get('issue');
+          if (!rawIssueId) {
             res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
             res.end('Missing ?issue= parameter');
             return;
           }
 
-          const jsonPath = path.join(dataDir, issueId.endsWith('.json') ? issueId : `${issueId}.json`);
-          if (!fs.existsSync(jsonPath)) {
+          const safeIssueId = sanitizeIssueId(rawIssueId);
+          if (!safeIssueId) {
+            res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
+            res.end(`Invalid issue ID format: ${rawIssueId}`);
+            return;
+          }
+
+          const jsonPath = path.join(dataDir, `${safeIssueId}.json`);
+          if (!jsonPath.startsWith(dataDir) || !fs.existsSync(jsonPath)) {
             res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
-            res.end(`Issue not found: ${issueId}`);
+            res.end(`Issue not found: ${rawIssueId}`);
             return;
           }
 
@@ -205,7 +297,7 @@ export function inspectPDF(pdfPath) {
 /**
  * Exports a single issue to PDF via headless Chrome
  */
-export async function exportIssueToPDF(issueId, options = {}) {
+export async function exportIssueToPDF(rawIssueId, options = {}) {
   const chromePath = options.chromePath || findChromeBinary();
   if (!chromePath) {
     throw new Error('Google Chrome or Microsoft Edge binary could not be located on this system');
@@ -216,13 +308,27 @@ export async function exportIssueToPDF(issueId, options = {}) {
     throw new Error('Print server port is required');
   }
 
-  fs.mkdirSync(outputDir, { recursive: true });
+  const safeIssueId = sanitizeIssueId(rawIssueId);
+  const knownIssues = getKnownIssueIds();
+  if (!safeIssueId || !knownIssues.includes(safeIssueId)) {
+    throw new Error(`Issue not found or invalid: "${rawIssueId}"`);
+  }
+  const issueId = safeIssueId;
+
+  const targetDir = options.outputDir || outputDir;
+  fs.mkdirSync(targetDir, { recursive: true });
 
   const pdfFileName = ISSUE_PDF_MAP[issueId] || `${issueId}.pdf`;
-  const destPdfPath = path.join(outputDir, pdfFileName);
+  const destPdfPath = path.resolve(targetDir, pdfFileName);
+
+  // Guarantee destination path is strictly within targetDir
+  if (!destPdfPath.startsWith(path.resolve(targetDir))) {
+    throw new Error(`Target PDF path traverses outside output directory: ${destPdfPath}`);
+  }
 
   const renderUrl = `http://127.0.0.1:${port}/render?issue=${encodeURIComponent(issueId)}`;
   const tmpProfileDir = fs.mkdtempSync(path.join(os.tmpdir(), 'galata-pdf-chrome-'));
+  activeTempDirs.add(tmpProfileDir);
 
   const chromeFlags = [
     '--headless=new',
@@ -249,45 +355,54 @@ export async function exportIssueToPDF(issueId, options = {}) {
   const startTime = Date.now();
 
   try {
-    await execFileAsync(chromePath, chromeFlags, { timeout: 45000 });
-  } catch (err) {
-    throw new Error(`Chrome headless PDF generation failed for "${issueId}": ${err.message}`);
-  } finally {
     try {
-      fs.rmSync(tmpProfileDir, { recursive: true, force: true });
+      await execFileAsync(chromePath, chromeFlags, { timeout: 45000 });
+    } catch (err) {
+      throw new Error(`Chrome headless PDF generation failed for "${issueId}": ${err.message}`);
+    }
+
+    const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+    const inspection = inspectPDF(destPdfPath);
+
+    console.log(`[export-pdf] ✔ Created ${pdfFileName} (${inspection.sizeMB} MB, ${inspection.pageCount} pages, ${duration}s)`);
+
+    return {
+      issueId,
+      destPdfPath,
+      fileName: pdfFileName,
+      ...inspection,
+      duration
+    };
+  } catch (err) {
+    // Failure cleanup: ensure any partial or corrupted PDF file in output/ is immediately unlinked
+    if (fs.existsSync(destPdfPath)) {
+      try {
+        fs.unlinkSync(destPdfPath);
+      } catch (unlinkErr) {
+        console.warn(`[export-pdf] Warning: Failed to clean up corrupted PDF ${destPdfPath}:`, unlinkErr.message);
+      }
+    }
+    throw err;
+  } finally {
+    activeTempDirs.delete(tmpProfileDir);
+    try {
+      fs.rmSync(tmpProfileDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
     } catch {
       // Ignore transient Windows file lock during teardown
     }
   }
-
-  const duration = ((Date.now() - startTime) / 1000).toFixed(2);
-  const inspection = inspectPDF(destPdfPath);
-
-  console.log(`[export-pdf] ✔ Created ${pdfFileName} (${inspection.sizeMB} MB, ${inspection.pageCount} pages, ${duration}s)`);
-
-  return {
-    issueId,
-    destPdfPath,
-    fileName: pdfFileName,
-    ...inspection,
-    duration
-  };
 }
 
 /**
  * Main CLI Entry Point
  */
 async function main() {
+  cleanupStaleTempProfiles();
+
   const args = process.argv.slice(2);
-  const isAll = args.includes('--all');
-  let singleIssue = null;
+  const knownFlags = ['--all', '--issue', '--help', '-h'];
 
-  const issueIdx = args.indexOf('--issue');
-  if (issueIdx !== -1 && args[issueIdx + 1]) {
-    singleIssue = args[issueIdx + 1];
-  }
-
-  if (!isAll && !singleIssue) {
+  if (args.length === 0 || args.includes('--help') || args.includes('-h')) {
     console.log(`
 Galata Rotary Bülten Stüdyosu — Headless Chrome PDF Generator CLI
 
@@ -299,6 +414,43 @@ Examples:
   node scripts/export-pdf.mjs --all
   node scripts/export-pdf.mjs --issue 2026-09-eylul
     `);
+    process.exit(args.length === 0 ? 1 : 0);
+  }
+
+  // Validate unknown flags
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === '--issue') {
+      i++; // Skip issue ID parameter
+      continue;
+    }
+    if (!knownFlags.includes(arg)) {
+      console.error(`ERROR: Unknown or unsupported flag "${arg}".`);
+      process.exit(1);
+    }
+  }
+
+  const isAll = args.includes('--all');
+  let singleIssue = null;
+
+  const issueIdx = args.indexOf('--issue');
+  if (issueIdx !== -1) {
+    const rawVal = args[issueIdx + 1];
+    if (!rawVal || rawVal.startsWith('--')) {
+      console.error('ERROR: Flag --issue requires an issue identifier (e.g. --issue 2026-07-temmuz)');
+      process.exit(1);
+    }
+    const cleanId = sanitizeIssueId(rawVal);
+    const knownIssues = getKnownIssueIds();
+    if (!cleanId || !knownIssues.includes(cleanId)) {
+      console.error(`ERROR: Issue not found or invalid: "${rawVal}" (known issues: ${knownIssues.join(', ')})`);
+      process.exit(1);
+    }
+    singleIssue = cleanId;
+  }
+
+  if (!isAll && !singleIssue) {
+    console.error('ERROR: Missing required flag. Specify either --all or --issue <issueId>');
     process.exit(1);
   }
 

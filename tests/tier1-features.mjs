@@ -210,7 +210,7 @@ export function createTier1Suites(projectRoot) {
         if (!fs.existsSync(dataDir)) {
           return { status: 'PENDING', milestone: 'M1', message: 'data/issues directory not yet created' };
         }
-        const files = fs.readdirSync(dataDir).filter(f => f.endsWith('.json'));
+        const files = fs.readdirSync(dataDir).filter(f => f.endsWith('.json') && f !== 'index.json');
         if (files.length === 0) {
           return { status: 'PENDING', milestone: 'M1', message: 'No issue JSON files found in data/issues' };
         }
@@ -237,7 +237,7 @@ export function createTier1Suites(projectRoot) {
         if (!fs.existsSync(dataDir)) {
           return { status: 'PENDING', milestone: 'M1', message: 'data/issues directory not yet created' };
         }
-        const files = fs.readdirSync(dataDir).filter(f => f.endsWith('.json'));
+        const files = fs.readdirSync(dataDir).filter(f => f.endsWith('.json') && f !== 'index.json');
         if (files.length === 0) {
           return { status: 'PENDING', milestone: 'M1', message: 'No issue JSON files found' };
         }
@@ -269,7 +269,7 @@ export function createTier1Suites(projectRoot) {
         if (!fs.existsSync(dataDir)) {
           return { status: 'PENDING', milestone: 'M1', message: 'data/issues directory not yet created' };
         }
-        const files = fs.readdirSync(dataDir).filter(f => f.endsWith('.json'));
+        const files = fs.readdirSync(dataDir).filter(f => f.endsWith('.json') && f !== 'index.json');
         if (files.length === 0) {
           return { status: 'PENDING', milestone: 'M1', message: 'No issue JSON files found' };
         }
@@ -295,7 +295,7 @@ export function createTier1Suites(projectRoot) {
         if (!fs.existsSync(dataDir)) {
           return { status: 'PENDING', milestone: 'M1', message: 'data/issues directory not yet created' };
         }
-        const files = fs.readdirSync(dataDir).filter(f => f.endsWith('.json'));
+        const files = fs.readdirSync(dataDir).filter(f => f.endsWith('.json') && f !== 'index.json');
         if (files.length === 0) {
           return { status: 'PENDING', milestone: 'M1', message: 'No issue JSON files found' };
         }

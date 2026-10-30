@@ -1,0 +1,62 @@
+[
+  {
+    "id": "2026-07-temmuz",
+    "filename": "2026-07-temmuz.json",
+    "title": "Temmuz 2026 (Sayı 1)",
+    "issueNumber": 1,
+    "month": "Temmuz",
+    "year": 2026,
+    "rotaryYear": "2026-2027",
+    "theme": "KALICI ETKİ YARAT",
+    "rotaryMonthTheme": "Anne ve Çocuk Sağlığı Ayı",
+    "totalArticles": 4,
+    "pageCount": 8,
+    "pdfFile": "Galata_Rotary_Bulten_2026_07_Temmuz_Sayi_1.pdf",
+    "president": "Sevilay Aksel"
+  },
+  {
+    "id": "2026-08-agustos",
+    "filename": "2026-08-agustos.json",
+    "title": "Ağustos 2026 (Sayı 2)",
+    "issueNumber": 2,
+    "month": "Ağustos",
+    "year": 2026,
+    "rotaryYear": "2026-2027",
+    "theme": "KALICI ETKİ YARAT",
+    "rotaryMonthTheme": "Üyelik ve Yeni Kulüp Geliştirme Ayı",
+    "totalArticles": 5,
+    "pageCount": 8,
+    "pdfFile": "Galata_Rotary_Bulten_2026_08_Agustos_Sayi_2.pdf",
+    "president": "Sevilay Aksel"
+  },
+  {
+    "id": "2026-09-eylul",
+    "filename": "2026-09-eylul.json",
+    "title": "Eylül 2026 (Sayı 3)",
+    "issueNumber": 3,
+    "month": "Eylül",
+    "year": 2026,
+    "rotaryYear": "2026-2027",
+    "theme": "KALICI ETKİ YARAT",
+    "rotaryMonthTheme": "Temel Eğitim ve Okuryazarlık Ayı",
+    "totalArticles": 5,
+    "pageCount": 9,
+    "pdfFile": "Galata_Rotary_Bulten_2026_09_Eylul_Sayi_3.pdf",
+    "president": "Sevilay Aksel"
+  },
+  {
+    "id": "2026-10-ekim",
+    "filename": "2026-10-ekim.json",
+    "title": "Ekim 2026 (Sayı 4)",
+    "issueNumber": 4,
+    "month": "Ekim",
+    "year": 2026,
+    "rotaryYear": "2026-2027",
+    "theme": "KALICI ETKİ YARAT",
+    "rotaryMonthTheme": "Toplumsal ve Ekonomik Kalkınma Ayı & Çocuk Felciyle Mücadele",
+    "totalArticles": 6,
+    "pageCount": 9,
+    "pdfFile": "Galata_Rotary_Bulten_2026_10_Ekim_Sayi_4.pdf",
+    "president": "Sevilay Aksel"
+  }
+]

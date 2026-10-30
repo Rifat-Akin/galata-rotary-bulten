@@ -17,6 +17,70 @@ const PUBLIC_DIR = path.join(PROJECT_ROOT, 'public');
 
 const CORPORATE_THEME = 'KALICI ETKİ YARAT';
 const FORBIDDEN_THEME = 'Rotary Sihri';
+export const FORBIDDEN_THEME_REGEX = /rotary(?:\s|[\-_.]|\\[tnr])*[sş][iıİI]hr[iıİI]/i;
+
+export function checkStringForForbiddenBrand(str) {
+  if (typeof str !== 'string' || !str) return false;
+  if (FORBIDDEN_THEME_REGEX.test(str)) return true;
+
+  let unescaped = str;
+  try {
+    if (unescaped.includes('%')) {
+      unescaped = decodeURIComponent(unescaped);
+    }
+  } catch {}
+
+  unescaped = unescaped
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(parseInt(dec, 10)));
+
+  unescaped = unescaped
+    .replace(/\\+u([0-9a-fA-F]{4})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+    .replace(/\\+u\{([0-9a-fA-F]+)\}/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/\\+x([0-9a-fA-F]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+
+  unescaped = unescaped.replace(/\\+[tnr]/g, ' ');
+  unescaped = unescaped.replace(/[\u200B-\u200D\uFEFF\u00AD\u2060]/g, '');
+  unescaped = unescaped.normalize('NFC');
+
+  if (FORBIDDEN_THEME_REGEX.test(unescaped)) return true;
+
+  const folded = unescaped
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[iıİI]/g, 'i')
+    .replace(/[sşŞS]/g, 's')
+    .replace(/[hH]/g, 'h')
+    .replace(/[rR]/g, 'r')
+    .toLowerCase();
+
+  return /rotary[\s_\-.]*sihri/.test(folded);
+}
+
+export function hasForbiddenBrandDeep(target, visited = new WeakSet()) {
+  if (target == null) return false;
+  if (typeof target === 'string') return checkStringForForbiddenBrand(target);
+  if (typeof target === 'number' || typeof target === 'boolean') return false;
+
+  if (typeof target === 'object') {
+    if (visited.has(target)) return false;
+    visited.add(target);
+
+    if (Array.isArray(target)) {
+      for (const item of target) {
+        if (hasForbiddenBrandDeep(item, visited)) return true;
+      }
+      return false;
+    }
+
+    for (const [key, value] of Object.entries(target)) {
+      if (checkStringForForbiddenBrand(key)) return true;
+      if (hasForbiddenBrandDeep(value, visited)) return true;
+    }
+  }
+
+  return false;
+}
+
 const POLIO_THEME = 'ÇOCUK FELCİNE SON';
 const POLIO_CRIMSON = '#E01E26';
 
@@ -84,8 +148,8 @@ function validateIssue(filename) {
 
   const rawText = fs.readFileSync(filePath, 'utf8');
 
-  // 1. Forbidden Theme Check (Zero occurrences of "Rotary Sihri")
-  if (rawText.includes(FORBIDDEN_THEME)) {
+  // 1. Forbidden Theme Check (Zero occurrences of "Rotary Sihri", case-insensitive & Turkish resilient)
+  if (FORBIDDEN_THEME_REGEX.test(rawText) || checkStringForForbiddenBrand(rawText)) {
     errors.push(`Kritik Kural İhlali: Yasaklı tema ifadesi bulundu: "${FORBIDDEN_THEME}"`);
   }
 
@@ -106,6 +170,14 @@ function validateIssue(filename) {
       errors: [`JSON Ayrıştırma Hatası: ${err.message}`],
       warnings: []
     };
+  }
+
+  // 1b. Deep Unicode Unescape & Object Scan Check
+  if (issue && (FORBIDDEN_THEME_REGEX.test(JSON.stringify(issue)) || hasForbiddenBrandDeep(issue))) {
+    const errorMsg = `Kritik Kural İhlali: Yasaklı tema ifadesi bulundu: "${FORBIDDEN_THEME}"`;
+    if (!errors.includes(errorMsg)) {
+      errors.push(errorMsg);
+    }
   }
 
   // 3. Schema Structure & Theme Verification
