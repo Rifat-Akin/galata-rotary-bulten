@@ -265,6 +265,10 @@ async function runEmpiricalChallengeSuite() {
     '--disable-gpu',
     '--no-first-run',
     '--no-default-browser-check',
+    '--disable-component-update',
+    '--disable-background-networking',
+    '--disable-breakpad',
+    '--disable-crash-reporter',
     '--window-size=1280,900',
     `http://127.0.0.1:${port}/index.html`
   ], { stdio: ['ignore', 'pipe', 'pipe'] });
@@ -830,10 +834,16 @@ async function runEmpiricalChallengeSuite() {
     }
   } finally {
     if (session) session.close();
-    chromeProc.kill();
+    if (chromeProc.exitCode === null) {
+      chromeProc.kill();
+      await Promise.race([
+        new Promise(r => chromeProc.once('close', r)),
+        new Promise(r => setTimeout(r, 1500))
+      ]);
+    }
     server.close();
     try {
-      fs.rmSync(tempUserDataDir, { recursive: true, force: true });
+      fs.rmSync(tempUserDataDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 150 });
     } catch {}
   }
 

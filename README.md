@@ -40,29 +40,29 @@ Tüm bültenler 7–9 sayfa A4 formatında, 300 DPI baskı kalitesinde, vektöre
 |:---:|:---:|:---|:---:|:---|
 | **Sayı 1** | **Temmuz 2026** | Anne ve Çocuk Sağlığı Ayı • Meeting 1008 • Çekya Değişimi • Sıla Projesi • İlhan Eksen Kitabı | 8 Sayfa A4 | [`output/Galata_Rotary_Bulten_2026_07_Temmuz_Sayi_1.pdf`](output/Galata_Rotary_Bulten_2026_07_Temmuz_Sayi_1.pdf) |
 | **Sayı 2** | **Ağustos 2026** | Üyelik ve Yeni Kulüp Geliştirme Ayı • Grand Hyatt Taşınma • Gaye Binark • Sağlık Bağışı • 30 Ağustos • Pera Kitabı | 8 Sayfa A4 | [`output/Galata_Rotary_Bulten_2026_08_Agustos_Sayi_2.pdf`](output/Galata_Rotary_Bulten_2026_08_Agustos_Sayi_2.pdf) |
-| **Sayı 3** *(Öncelik 1)* | **Eylül 2026** | Temel Eğitim ve Okuryazarlık Ayı • Ritz Açık Hava Sineması • Pınar Pirim • CP Puset • 23. Yıldönümü • Timurtaş Onan Kitabı | 8 Sayfa A4 | [`output/Galata_Rotary_Bulten_2026_09_Eylul_Sayi_3.pdf`](output/Galata_Rotary_Bulten_2026_09_Eylul_Sayi_3.pdf) |
-| **Sayı 4** *(Öncelik 1)* | **Ekim 2026** | Ekonomik ve Toplumsal Kalkınma & Polio • Cumhuriyet Balosu • RYLA • Akülü Sandalye • Sibel Usanma • Celali Yılmaz Kitabı | 8 Sayfa A4 | [`output/Galata_Rotary_Bulten_2026_10_Ekim_Sayi_4.pdf`](output/Galata_Rotary_Bulten_2026_10_Ekim_Sayi_4.pdf) |
+| **Sayı 3** *(Öncelik 1)* | **Eylül 2026** | Temel Eğitim ve Okuryazarlık Ayı • Ritz Açık Hava Sineması • Pınar Pirim • CP Puset • 23. Yıldönümü • Timurtaş Onan Kitabı | 9 Sayfa A4 | [`output/Galata_Rotary_Bulten_2026_09_Eylul_Sayi_3.pdf`](output/Galata_Rotary_Bulten_2026_09_Eylul_Sayi_3.pdf) |
+| **Sayı 4** *(Öncelik 1)* | **Ekim 2026** | Ekonomik ve Toplumsal Kalkınma & Polio • Cumhuriyet Balosu • RYLA • Akülü Sandalye • Sibel Usanma • Celali Yılmaz Kitabı | 9 Sayfa A4 | [`output/Galata_Rotary_Bulten_2026_10_Ekim_Sayi_4.pdf`](output/Galata_Rotary_Bulten_2026_10_Ekim_Sayi_4.pdf) |
 
 ---
 
 ## ✨ Bülten Stüdyosu Temel Özellikleri
 
-1. **İki Panelli İnteraktif Stüdyo (Split-Screen Studio)**:
-   - Sol panel: Kapak, künye, başkan mesajı, haber/toplantı içerikleri, fotoğraf yükleme, Bento mizanpaj seçici ve kültür köşesi formları.
-   - Sağ panel: Birebir gerçek A4 (`210mm × 297mm`) ölçekli, duyarlı canlı önizleme ve yakınlaştırma araçları (%50, %75, %100, Ekrana Sığdır).
-2. **Gerçek Zamanlı 297mm A4 Taşma Tespiti (Overflow Detection)**:
-   - Metin veya fotoğraf yoğunluğu 297mm sayfa sınırını aştığında anında görsel taşma uyarısı ve üst bilgi çubuğunda taşan piksel uyarısı verir.
-3. **Dinamik Bento Fotoğraf Izgaraları**:
+1. **İki Panelli İnteraktif Stüdyo & Okuyucu Modu (Split-Screen Studio & Reader Mode)**:
+   - Sol panel: Kapak, künye, başkan mesajı, haber/toplantı içerikleri, fotoğraf yükleme, Bento mizanpaj seçici ve kültür köşesi formları (tahribatsız odak/kaydırma koruma ile).
+   - Sağ panel & Tam Ekran Okuyucu Modu: Birebir A4 (`210mm × 297mm`) ölçekli canlı önizleme, klavye kısayolları (`←`/`→`, `PageUp`/`PageDown`), `Ctrl + Fare Tekerleği` ile akıcı yakınlaştırma (`%40`–`%200`), küçük sayfa şeridi ve mobil/tablet sekme görünümü.
+2. **Çift Çalışma Modu (Dual Runtime: Yerel REST API + GitHub Pages Statik Mod)**:
+   - Yerel sunucuda (`http://localhost:3420`) tam REST API kayıt, fotoğraf yükleme ve tek tıkla Headless Chrome PDF derleme.
+   - GitHub Pages canlı statik ortamda `data/issues/index.json` kataloğu, `localStorage` taslak koruma, JSON dışa aktarma ve hazır PDF indirme desteği.
+3. **Gerçek Zamanlı 297mm A4 Taşma Tespiti (Multi-Page Overflow Detection)**:
+   - Metin veya asenkron yüklenen fotoğraflar 297mm A4 sınırını (`.page-inner` dahil) aştığında anında uyarır ve taşan sayfalar arasında ardışık geçiş sağlar.
+4. **Dinamik Bento Fotoğraf Izgaraları**:
    - Her haber kartı için tek tıkla 1, 2, 3 veya 4 fotoğraflı Bento mizanpajları (`single-col`, `two-col`, `bento-3`, `bento-4`).
-4. **Bağımsız Mizanpaj Motoru (`public/renderer.js`)**:
-   - Sıfır harici kütüphane bağımlılığına sahip saf JavaScript DOM motoru.
-   - İleride **RotaClub** portalına doğrudan web bileşeni veya iframe olarak entegre edilebilir.
-5. **Yerel Headless Chrome PDF Üretim Motoru (`scripts/export-pdf.mjs`)**:
-   - Sistemde kurulu Google Chrome / Edge tarayıcısını doğrudan CLI (`--headless=new --print-to-pdf`) üzerinden çalıştırarak harici puppeteer yüklemesi gerektirmeden 300 DPI vektörel PDF üretir.
-6. **12 Aylık Rotary Takvimi**:
-   - Sayfa 2'de başkan mesajının yanında yer alan, dönemin aktif ayını altın sarısı (`#F7A81B`) bordür ile otomatik vurgulayan entegre takvim.
-7. **Tam Sayfa Polio Arka Kapağı**:
-   - Kırmızı (`#E01E26`) kurumsal kapanış, 7 Odak Alanı simgeleri, Dörtlü Özdenetim ve sosyal medya iletişim kartı.
+5. **Bağımsız Mizanpaj Motoru (`public/renderer.js`)**:
+   - Sıfır harici kütüphane bağımlılığına sahip saf JavaScript DOM motoru; **RotaClub** portalına doğrudan entegre edilebilir.
+6. **Yerel Headless Chrome PDF Üretim Motoru (`scripts/export-pdf.mjs`)**:
+   - Sistemde kurulu Google Chrome / Edge tarayıcısını izole ve otomatik temizlenen geçici profil ile çalıştırarak harici paket yüklemeden 300 DPI vektörel PDF üretir.
+7. **12 Aylık Rotary Takvimi & Tam Sayfa Polio Arka Kapağı**:
+   - Sayfa 2'de aktif ayı altın sarısı (`#F7A81B`) ile vurgulayan takvim; arka kapakta kırmızı (`#E01E26`) **"ÇOCUK FELCİNE SON" / "End Polio Now"** kurumsal kapanışı.
 
 ---
 
