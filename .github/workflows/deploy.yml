@@ -1,25 +1,23 @@
-name: Deploy Galata Rotary Bülten Stüdyosu to GitHub Pages
+name: Validate & Publish Galata Rotary Bülten Stüdyosu
 
 on:
+  pull_request:
+    branches: [main]
   push:
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
 concurrency:
-  group: "pages"
+  group: "galata-pages-release"
   cancel-in-progress: false
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - name: Checkout repository
+      - name: Checkout exact source revision
         uses: actions/checkout@v4
 
       - name: Setup Node.js 24
@@ -27,36 +25,111 @@ jobs:
         with:
           node-version: 24
 
-      - name: Run Issue Validation
-        run: node scripts/validate-issues.mjs
-
-      - name: Run E2E Test Harness
-        run: node tests/e2e-harness.mjs
-
-      - name: Prepare Pages Artifact
+      - name: Verify browser availability
         run: |
+          command -v google-chrome || command -v google-chrome-stable || command -v chromium
+
+      - name: Verify JavaScript syntax
+        run: |
+          node --check server.mjs
+          node --check public/studio.js
+          node --check public/renderer.js
+          node --check scripts/chrome-cdp-print.mjs
+          node --check scripts/export-pdf.mjs
+          node --check tests/security-http.mjs
+
+      - name: Run complete validation and browser regression suite
+        run: npm run test:all
+
+      - name: Test negative HTTP and PDF-failure security cases
+        run: node --test tests/security-http.mjs
+
+      - name: Rebuild all four PDF issues from reviewed JSON
+        run: node scripts/export-pdf.mjs --all
+
+      - name: Verify each generated PDF and editorial issue index
+        run: node scripts/verify-pdf-archive.mjs
+
+      - name: Upload verified PDF archive for release
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: galata-verified-pdfs
+          path: output/*.pdf
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+    steps:
+      - name: Checkout canonical main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: true
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Retrieve exact verified PDFs
+        uses: actions/download-artifact@v4
+        with:
+          name: galata-verified-pdfs
+          path: output
+
+      - name: Verify received PDF archive again
+        run: node scripts/verify-pdf-archive.mjs
+
+      - name: Save validated PDF binaries in canonical GitHub repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add output/*.pdf
+          if ! git diff --cached --quiet; then
+            git commit -m "build: synchronize verified PDF archive (34 pages)"
+            git push origin HEAD:main
+          fi
+          git status --short
+
+      - name: Prepare Pages website
+        shell: bash
+        run: |
+          set -euo pipefail
           mkdir -p _site
-          cp -r public/* _site/
-          mkdir -p _site/output
-          cp -r output/* _site/output/ || true
-          mkdir -p _site/data
-          cp -r data/* _site/data/ || true
+          cp -r public/. _site/
+          mkdir -p _site/output _site/data
+          cp output/*.pdf _site/output/
+          cp -r data/. _site/data/
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
-      - name: Upload Pages Artifact
+      - name: Upload Pages website
         uses: actions/upload-pages-artifact@v3
         with:
-          path: '_site'
+          path: _site
 
   deploy:
+    if: github.event_name != 'pull_request'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-    needs: build-and-test
+    needs: publish
+    permissions:
+      pages: write
+      id-token: write
     steps:
-      - name: Deploy to GitHub Pages
+      - name: Deploy verified website
         id: deployment
         uses: actions/deploy-pages@v4

@@ -46,6 +46,7 @@ const MIME_TYPES = {
 
 function findChromeBinary() {
   const candidates = [
+    process.env.GALATA_CHROME_BIN || null,
     process.env['PROGRAMFILES'] ? path.join(process.env['PROGRAMFILES'], 'Google', 'Chrome', 'Application', 'chrome.exe') : null,
     process.env['PROGRAMFILES(X86)'] ? path.join(process.env['PROGRAMFILES(X86)'], 'Google', 'Chrome', 'Application', 'chrome.exe') : null,
     process.env['LOCALAPPDATA'] ? path.join(process.env['LOCALAPPDATA'], 'Google', 'Chrome', 'Application', 'chrome.exe') : null,
@@ -259,6 +260,7 @@ async function runEmpiricalChallengeSuite() {
 
   const chromeProc = spawn(chromeBin, [
     '--headless=new',
+    ...(os.platform() === 'linux' ? ['--no-sandbox', '--disable-dev-shm-usage'] : []),
     `--remote-debugging-port=${cdpPort}`,
     '--remote-debugging-address=127.0.0.1',
     `--user-data-dir=${tempUserDataDir}`,

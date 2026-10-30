@@ -12,7 +12,7 @@ echo Sunucu başlatılıyor ve web arayüzü tarayıcınızda açılıyor...
 echo URL: http://localhost:3420
 echo.
 
-start "" "http://localhost:3420"
+set "GALATA_OPEN_BROWSER=1"
 node server.mjs
 
 pause

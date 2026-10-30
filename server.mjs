@@ -9,7 +9,7 @@
  * - POST /api/issues/new       : Initialize new month issue template (initMonth / createIssue)
  * - POST /api/upload           : Upload image to public/assets/photos/<issue>/
  * - POST /api/export-pdf/:id   : Export issue to print-quality A4 PDF using Chrome Headless CLI
- * - POST /api/rotaclub/sync    : Mock RotaClub synchronization
+ * - POST /api/rotaclub/sync    : Unavailable until a real integration is configured
  *
  * Static Hosting:
  * - /                          : public/index.html (Bülten Stüdyosu UI)
@@ -363,13 +363,25 @@ export function createIssue(customData = {}) {
   if (customData.month) {
     monthEntry = MONTH_ORDER.find(m => m.name.toLowerCase() === String(customData.month).trim().toLowerCase());
   }
+  if (customData.month && !monthEntry) {
+    throw new Error('Invalid month name');
+  }
   if (!monthEntry) {
     monthEntry = MONTH_ORDER[nextMonthIndex];
   }
 
   const targetMonth = customData.month || monthEntry.name;
-  const rawYear = customData.year || (baseIssue ? baseIssue.year : 2026);
-  const targetYear = parseInt(rawYear, 10) || 2026;
+  const nextCalendarYear = baseIssue
+    ? Number(baseIssue.year) + (String(baseIssue.month).toLowerCase() === 'aralık' && monthEntry.name === 'Ocak' ? 1 : 0)
+    : 2026;
+  const rawYear = customData.year || nextCalendarYear;
+  const targetYear = Number(rawYear);
+  const issueNumber = Number(customData.issueNumber || nextIssueNum);
+  if (!Number.isInteger(targetYear) || targetYear < 2000 || targetYear > 2100 ||
+      !Number.isInteger(issueNumber) || issueNumber < 1 || issueNumber > 10000) {
+    throw new Error('Year or issue number is invalid');
+  }
+  const rotaryStartYear = monthEntry.num >= 7 ? targetYear : targetYear - 1;
   const targetTheme = customData.rotaryMonthTheme || monthEntry.theme;
 
   const monthSlug = targetMonth
@@ -393,14 +405,14 @@ export function createIssue(customData = {}) {
     throw new Error('Target file path outside data directory');
   }
 
-  if (fs.existsSync(targetFilePath) && !customData.overwrite) {
+  if (fs.existsSync(targetFilePath)) {
     throw new Error(`Sayı zaten mevcut: ${safeId}. Farklı bir ay veya id seçiniz.`);
   }
 
   const newIssueTemplate = {
     id: safeId,
-    issueNumber: customData.issueNumber || nextIssueNum,
-    rotaryYear: "2026-2027",
+    issueNumber,
+    rotaryYear: `${rotaryStartYear}-${rotaryStartYear + 1}`,
     month: targetMonth,
     year: targetYear,
     theme: "KALICI ETKİ YARAT",
@@ -424,28 +436,17 @@ export function createIssue(customData = {}) {
     },
     presidentMessage: {
       title: `${targetMonth} Ayı Başkan Mesajı`,
-      body: `Değerli Rotaryen Dostlarım ve Sevgili Galata Ailemiz,\n\n${targetMonth} ayında "Kalıcı Etki Yarat" ilkemizle hizmetlerimize ve projelerimize devam ediyoruz.\n\nSevgi ve Saygılarımla,\nSevilay Aksel\nGalata Rotary Kulübü Dönem Başkanı`,
+      body: '', // Not editorially approved until the club supplies a president message
       photo: baseIssue && baseIssue.presidentMessage ? baseIssue.presidentMessage.photo : "assets/photos/2026-09/baskan_sevilay_aksel.jpg"
     },
-    articles: [
-      {
-        id: "art-01",
-        category: "Haberler ve Etkinlikler",
-        date: `1 ${targetMonth} ${targetYear}`,
-        title: `${targetMonth} Ayı Açılış Toplantısı`,
-        venue: "Grand Hyatt İstanbul Taksim",
-        summary: `${targetMonth} ayı dönemsel projelerimiz ve toplantı gündemimiz üyelerimizle paylaşıldı.`,
-        layout: "two-col",
-        photos: []
-      }
-    ],
+    articles: [], // Do not invent meetings or project outcomes for a new month
     culture: {
       title: "Galata Kültür Köşesi",
       book: {
-        title: "İstanbul ve Galata Hatıratı",
-        author: "Tarih ve Kültür Araştırmaları",
-        cover: "assets/brand/galata-silhouette.svg",
-        summary: "Galata'nın tarihî ve kültürel dokusunu ele alan kapsamlı bir editoryal inceleme."
+        title: '',
+        author: '',
+        cover: '',
+        summary: ''
       }
     },
     backCover: {
@@ -459,7 +460,8 @@ export function createIssue(customData = {}) {
     }
   };
 
-  fs.writeFileSync(targetFilePath, JSON.stringify(newIssueTemplate, null, 2), 'utf8');
+  // Newly created drafts must not overwrite existing published data.
+  fs.writeFileSync(targetFilePath, JSON.stringify(newIssueTemplate, null, 2), { encoding: 'utf8', flag: 'wx' });
 
   // Also ensure photo directory exists for this new issue
   const photoDir = path.join(PUBLIC_DIR, 'assets', 'photos', `${targetYear}-${monthNumStr}`);
@@ -483,7 +485,7 @@ async function handleRequest(req, res) {
   // This is a single-user local editor, not a public publishing API.
   // Host validation also prevents browser DNS-rebinding attacks on loopback.
   const host = String(req.headers.host || '');
-  if (!/^(?:localhost|127\\.0\\.0\\.1)(?::[0-9]{1,5})?$/.test(host)) {
+  if (!/^(?:localhost|127[.]0[.]0[.]1)(?::[0-9]{1,5})?$/.test(host)) {
     return sendJSON(res, 403, { error: 'Local editor host required' });
   }
   const origin = req.headers.origin;
@@ -495,13 +497,13 @@ async function handleRequest(req, res) {
     } catch {}
     if (!matchesOrigin) return sendJSON(res, 403, { error: 'Cross-origin requests forbidden' });
   }
-  if (req.headers['sec-fetch-site'] === 'cross-site') {
+  if (!['GET', 'HEAD'].includes(method) && req.headers['sec-fetch-site'] === 'cross-site') {
     return sendJSON(res, 403, { error: 'Cross-site requests forbidden' });
   }
   if (method === 'OPTIONS') return sendJSON(res, 405, { error: 'CORS is disabled on the local editor' });
   if (['POST', 'PUT', 'PATCH'].includes(method) && pathname !== '/api/upload' &&
       !String(req.headers['content-type'] || '').startsWith('application/json') &&
-      pathname !== '/api/rotaclub/sync' && !pathname.startsWith('/api/export-pdf/')) {
+      pathname !== '/api/rotaclub/sync' && !/^\/api\/export-pdf\//.test(pathname)) {
     return sendJSON(res, 415, { error: 'Expected application/json Content-Type' });
   }
 
@@ -627,7 +629,7 @@ async function handleRequest(req, res) {
 
       fs.mkdirSync(DATA_DIR, { recursive: true });
       // Stage first so a partial write cannot destroy an existing issue.
-      const stagedPath = filePath + '.tmp-' + process.pid;
+      const stagedPath = filePath + '.tmp-' + process.pid + '-' + Date.now() + '-' + Math.random().toString(36).slice(2);
       try {
         fs.writeFileSync(stagedPath, JSON.stringify(issueData, null, 2), { encoding: 'utf8', flag: 'wx' });
         fs.renameSync(stagedPath, filePath);
@@ -914,7 +916,17 @@ export function startServer(port = DEFAULT_PORT, attempt = 0) {
 
 // Auto-run if executed directly as entrypoint
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(__filename)) {
-  startServer().catch(err => {
+  startServer().then(({ port }) => {
+    // The Windows launcher opens the ACTUAL assigned port, including retry fallback.
+    // Opening before listen() used to select the wrong port if 3420 was busy.
+    if (process.env.GALATA_OPEN_BROWSER === '1' && process.platform === 'win32') {
+      const browserUrl = `http://localhost:${port}`;
+      execFile('cmd.exe', ['/d', '/c', 'start', '""', browserUrl],
+        { windowsHide: true }, err => {
+          if (err) console.warn('Tarayıcı otomatik açılmadı, adres:', browserUrl, err.message);
+        });
+    }
+  }).catch(err => {
     console.error('Fatal server error:', err);
     process.exit(1);
   });

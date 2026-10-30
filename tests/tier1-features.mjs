@@ -176,10 +176,14 @@ export function createTier1Suites(projectRoot) {
           return { status: 'PENDING', milestone: 'M2', message: 'scripts/export-pdf.mjs not yet created' };
         }
         const code = fs.readFileSync(scriptPath, 'utf8');
-        if (!code.includes('--headless') || !code.includes('--print-to-pdf')) {
-          throw new Error('scripts/export-pdf.mjs must use native Chrome headless CLI flags (--headless and --print-to-pdf)');
+        if (!code.includes('printPageToPDF') || !code.includes('inspectPDF(stagedPdfPath)') || !code.includes('renameSync(stagedPdfPath, destPdfPath)')) {
+          throw new Error('PDF engine must verify temporary Chrome CDP output before atomic publish');
         }
-        return { status: 'PASS', message: 'Headless Chrome PDF export script verified' };
+        const chromePrinter = fs.readFileSync(path.join(scriptsDir, 'chrome-cdp-print.mjs'), 'utf8');
+        if (!chromePrinter.includes('Page.printToPDF') || !chromePrinter.includes('waitForPrintablePage')) {
+          throw new Error('Chrome CDP printing must wait for images/fonts before printing');
+        }
+        return { status: 'PASS', message: 'Verified Chrome CDP and atomic PDF publish pipeline' };
       }
     },
 

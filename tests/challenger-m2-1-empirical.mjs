@@ -336,9 +336,10 @@ async function main() {
       );
 
       testAssert(
-        'Failure cleanup: partial/corrupt PDF is unlinked and absent from output directory',
-        !fs.existsSync(corruptDestFile),
-        `Corrupt file unexpectedly remained at ${corruptDestFile}`
+        'Failed export must not overwrite/delete existing destination PDF',
+        fs.existsSync(corruptDestFile) &&
+          fs.readFileSync(corruptDestFile, 'utf8') === '%PDF-1.4 CORRUPT HEADER TRUNCATED',
+        `Existing file unexpectedly changed or was deleted: ${corruptDestFile}`
       );
     } finally {
       if (fs.existsSync(testOutputDir)) {

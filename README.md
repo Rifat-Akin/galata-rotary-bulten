@@ -34,7 +34,7 @@
 
 ## 📚 2026–2027 Dönemi 4 Aylık Dergi Bültenleri (`output/`)
 
-Tüm bültenler 7–9 sayfa A4 formatında, 300 DPI baskı kalitesinde, vektörel tipografi, çift sütun editoryal mizanpaj, Bento fotoğraf ızgaraları, Galata silüeti ve tam sayfa crimson (`#E01E26`) **"ÇOCUK FELCİNE SON"** arka kapağıyla üretilmiştir.
+Tüm bültenler 7–9 sayfa A4 formatında, baskıya uygun, vektörel tipografi, çift sütun editoryal mizanpaj, Bento fotoğraf ızgaraları, Galata silüeti ve tam sayfa crimson (`#E01E26`) **"ÇOCUK FELCİNE SON"** arka kapağıyla üretilmiştir.
 
 | Sayı | Dönem Ayı | Tematik Odak | Sayfa Sayısı | PDF Çıktısı |
 |:---:|:---:|:---|:---:|:---|
@@ -52,7 +52,7 @@ Tüm bültenler 7–9 sayfa A4 formatında, 300 DPI baskı kalitesinde, vektöre
    - Sağ panel & Tam Ekran Okuyucu Modu: Birebir A4 (`210mm × 297mm`) ölçekli canlı önizleme, klavye kısayolları (`←`/`→`, `PageUp`/`PageDown`), `Ctrl + Fare Tekerleği` ile akıcı yakınlaştırma (`%40`–`%200`), küçük sayfa şeridi ve mobil/tablet sekme görünümü.
 2. **Çift Çalışma Modu (Dual Runtime: Yerel REST API + GitHub Pages Statik Mod)**:
    - Yerel sunucuda (`http://localhost:3420`) tam REST API kayıt, fotoğraf yükleme ve tek tıkla Headless Chrome PDF derleme.
-   - GitHub Pages canlı statik ortamda `data/issues/index.json` kataloğu, `localStorage` taslak koruma, JSON dışa aktarma ve hazır PDF indirme desteği.
+   - GitHub Pages canlı statik ortamda `data/issues/index.json` kataloğu, `localStorage` taslak koruma, yeni ay için yerel taslak, JSON dışa aktarma ve **değiştirilmemiş** resmî PDF'yi indirme desteği. Değiştirilen sayılar tarayıcıdan yeniden yazdırılır; eski resmî PDF asla güncelmiş gibi indirilmez.
 3. **Gerçek Zamanlı 297mm A4 Taşma Tespiti (Multi-Page Overflow Detection)**:
    - Metin veya asenkron yüklenen fotoğraflar 297mm A4 sınırını (`.page-inner` dahil) aştığında anında uyarır ve taşan sayfalar arasında ardışık geçiş sağlar.
 4. **Dinamik Bento Fotoğraf Izgaraları**:
@@ -60,7 +60,7 @@ Tüm bültenler 7–9 sayfa A4 formatında, 300 DPI baskı kalitesinde, vektöre
 5. **Bağımsız Mizanpaj Motoru (`public/renderer.js`)**:
    - Sıfır harici kütüphane bağımlılığına sahip saf JavaScript DOM motoru; **RotaClub** portalına doğrudan entegre edilebilir.
 6. **Yerel Headless Chrome PDF Üretim Motoru (`scripts/export-pdf.mjs`)**:
-   - Sistemde kurulu Google Chrome / Edge tarayıcısını izole ve otomatik temizlenen geçici profil ile çalıştırarak harici paket yüklemeden 300 DPI vektörel PDF üretir.
+   - Sistemde kurulu Google Chrome / Edge tarayıcısını izole profil ile CDP `Page.printToPDF` aracılığıyla çalıştırır. Görsel/font yüklemeleri, A4 taşması ve sayfa sayısı doğrulanır; doğrulanmamış PDF var olan baskı dosyasını silmez.
 7. **12 Aylık Rotary Takvimi & Tam Sayfa Polio Arka Kapağı**:
    - Sayfa 2'de aktif ayı altın sarısı (`#F7A81B`) ile vurgulayan takvim; arka kapakta kırmızı (`#E01E26`) **"ÇOCUK FELCİNE SON" / "End Polio Now"** kurumsal kapanışı.
 
@@ -69,7 +69,7 @@ Tüm bültenler 7–9 sayfa A4 formatında, 300 DPI baskı kalitesinde, vektöre
 ## 🚀 Hızlı Başlangıç (Yerel Çalıştırma)
 
 ### Gereksinimler
-- **Node.js**: v20+ (Tavsiye edilen: v24+)
+- **Node.js**: v24+ (PDF CDP yazdırma API'si için gereklidir)
 - **Google Chrome** veya **Microsoft Edge** (PDF motoru için)
 
 ### 1. Tek Tıkla Başlatma (Windows)
@@ -132,7 +132,7 @@ galata-rotary-bulten/
 │           ├── 2026-08/
 │           ├── 2026-09/
 │           └── 2026-10/
-├── output/                         # 300 DPI baskı kalitesinde 4 dergi PDF dosyası
+├── output/                         # A4 baskı boyutunda 4 dergi PDF dosyası
 │   ├── Galata_Rotary_Bulten_2026_07_Temmuz_Sayi_1.pdf
 │   ├── Galata_Rotary_Bulten_2026_08_Agustos_Sayi_2.pdf
 │   ├── Galata_Rotary_Bulten_2026_09_Eylul_Sayi_3.pdf
@@ -160,29 +160,31 @@ galata-rotary-bulten/
 
 ## 🔌 RotaClub Entegrasyon Mimarisi
 
-Bülten Stüdyosu, Türkiye'deki Rotary kulüplerinin yönetim portalı olan **RotaClub** ile tam uyumlu REST API uç noktaları sunar:
+Bülten Stüdyosu, RotaClub portalından **bağımsız bir yayın/editör aracıdır**. Yerel bülten API uç noktaları aşağıdadır; RotaClub'a gerçek üye/toplantı verisi çekme entegrasyonu **henüz bağlı değildir**:
 
 - `GET /api/issues`: Kayıtlı tüm bültenlerin özet listesini döner.
 - `GET /api/issues/:id`: İlgili ayın tam `BulletinIssue` JSON modelini döner.
 - `PUT /api/issues/:id`: Canlı güncellemeleri diske kaydeder.
 - `POST /api/upload`: Çok parçalı (multipart) görsel yüklemelerini karşılar.
 - `POST /api/export-pdf/:id`: Belirtilen sayı için sunucu tarafında PDF üretimini tetikler.
-- `POST /api/rotaclub/sync`: RotaClub üye ve toplantı verilerini bülten şablonuna bağlar.
+- `POST /api/rotaclub/sync`: Kurulu entegrasyon bulunmadığından **501 Not Implemented** döner. Arayüzde senkronizasyon eylemi kapatılmıştır; sahte başarı üretilmez.
 
 ---
 
 ## ⚙️ CI/CD Dağıtım Hattı (GitHub Actions)
 
-Projede `main` dalına yapılan her gönderimde `.github/workflows/deploy.yml` tetiklenir:
-1. Kaynak kod çekilir ve Node.js 24 çalışma ortamı kurulur.
-2. `node scripts/validate-issues.mjs` ile bülten içerikleri, tema tutarlılığı ("KALICI ETKİ YARAT") ve Türkçe glifler doğrulanır.
-3. `node tests/e2e-harness.mjs` ile 35 testin tamamı doğrulanır.
-4. `public/`, `data/` ve önceden üretilmiş 4 PDF bülteni barındıran `output/` dizinleri GitHub Pages yapay nesnesine aktarılır.
-5. `actions/deploy-pages@v4` ile canlı ortama sıfır kesintiyle dağıtılır.
+Yeni GitHub Actions akışı `pull_request` üzerinde güvenli ön denetim, `main` üzerinde yayın yapar:
+1. Node.js 24 ile kaynak sözdizimi, `npm run test:all` (tarayıcı dahil) ve `node --test tests/security-http.mjs` koşulur.
+2. Chrome CDP aracılığıyla dört PDF **yeniden üretilir**; `node scripts/verify-pdf-archive.mjs` dosya/sayı/katalog tutarlılığını onaylar.
+3. Yalnız `main` üzerinde, üretimi doğrulanmış dört PDF kısa ömürlü CI çıktısı olarak yayın görevine taşınır.
+4. Yayın görevi ikili PDF dosyalarını GitHub `output/` klasörüne kaydeder (değişiklik varsa). Böylece repo ile canlı PDF ayrışmaz.
+5. `public/`, `data/` ve doğrulanmış `output/` GitHub Pages'e dağıtılır. Herhangi bir test veya yazma adımı başarısız olursa yayın durur.
+
+**Sınırlar ve editoryal kabul:** GitHub Pages statik olduğu için tarayıcıda yapılan değişiklikler otomatik olarak GitHub'a gönderilmez; `JSON İndir` ile editoryal PR oluşturulmalıdır. Yeni aylar ilk aşamada **taslaktır**, resmî sayı değildir. Metin/tarih doğruluğu, kulüp görevli onayları ve özellikle reşit olmayanların fotoğrafları için yayın izni kulübün editoryal sorumluluğundadır. Eylül verisindeki kuruluş tarihi (`02.09.2003`) ile anlatımdaki `23.09.2003` ifadesi belge sahibi tarafından netleştirilmeden otomatik değiştirilmez. Görsel marka hakları için `ASSETS_NOTICE.md` dosyasına bakınız.
 
 ---
 
 ## 📄 Lisans
 
 Bu proje Galata Rotary Kulübü için geliştirilmiş olup MIT Lisansı ile korunmaktadır.  
-Kurumsal Rotary logoları ve markaları Rotary International'a aittir.
+Kaynak kod için `LICENSE` dosyasındaki MIT hükümleri geçerlidir. Kurumsal Rotary logoları, fotoğraflar, üçüncü kişi eserleri ve bülten içerikleri MIT lisansı kapsamında değildir; `ASSETS_NOTICE.md` geçerlidir.

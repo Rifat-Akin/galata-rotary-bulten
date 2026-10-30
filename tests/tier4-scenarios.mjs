@@ -43,15 +43,15 @@ export function createTier4Suites(projectRoot) {
           throw new Error('export-pdf.mjs does not include Chrome / Chromium path detection');
         }
 
-        // Verify essential Chrome CLI flags
-        const flags = ['--headless', '--print-to-pdf'];
-        for (const fl of flags) {
-          if (!scriptCode.includes(fl)) {
-            throw new Error(`export-pdf.mjs missing mandatory Chrome flag: ${fl}`);
-          }
+        // Use the CDP print API; CLI --print-to-pdf can exit without producing a file.
+        const cdpCode = fs.readFileSync(path.join(scriptsDir, 'chrome-cdp-print.mjs'), 'utf8');
+        if (!scriptCode.includes('printPageToPDF') || !cdpCode.includes('Page.printToPDF') ||
+            !scriptCode.includes('inspectPDF(stagedPdfPath)') ||
+            !scriptCode.includes('renameSync(stagedPdfPath, destPdfPath)')) {
+          throw new Error('Missing direct Chrome PDF printing or atomic output verification');
         }
 
-        return { status: 'PASS', message: 'Headless Chrome CLI generation pipeline configured correctly' };
+        return { status: 'PASS', message: 'Chrome CDP print and atomic PDF verification present' };
       }
     },
 

@@ -6,6 +6,7 @@
 
 // State Management & Dual Runtime Mode
 let currentIssue = null;
+let hasUnsavedChanges = false;
 let availableIssues = [];
 let renderDebounceTimer = null;
 let currentZoom = 0.75; // Default 75% zoom
@@ -135,6 +136,14 @@ function updateRuntimeModeBadge() {
       badge.title = 'Aktif Mod: Statik Tarayıcı Modu (Değişiklikler localStorage\'a kaydedilir, JSON ve PDF doğrudan indirilir)';
     }
   }
+
+  // No real RotaClub API contract has been configured. Never imply sync success.
+  const syncButton = document.getElementById('btn-rotaclub-sync');
+  if (syncButton) {
+    syncButton.disabled = true;
+    syncButton.title = 'RotaClub entegrasyonu bağlı değil; sahte senkronizasyon yapılmaz.';
+    syncButton.setAttribute('aria-label', 'RotaClub senkronizasyonu henüz kullanılabilir değil');
+  }
 }
 
 /**
@@ -145,8 +154,13 @@ function showToast(message, type = 'info') {
   if (!container) return;
 
   const toast = document.createElement('div');
-  toast.className = `toast toast-${type}`;
-  toast.innerHTML = `<span>${type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'}</span> <span>${message}</span>`;
+  toast.className = `toast toast-${type === 'success' || type === 'error' ? type : 'info'}`;
+  const icon = document.createElement('span');
+  icon.textContent = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
+  const content = document.createElement('span');
+  content.textContent = String(message || '');
+  toast.appendChild(icon);
+  toast.appendChild(content);
   container.appendChild(toast);
 
   setTimeout(() => {
@@ -202,6 +216,24 @@ async function loadIssuesList(selectedId = null) {
     }
   }
 
+  if (activeRuntimeMode === 'static') {
+    // New local drafts survive a reload, but are never presented as published issues.
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key || !/^galata_issue_[0-9]{4}-[0-9]{2}-[a-z0-9-]+$/.test(key)) continue;
+      try {
+        const draft = JSON.parse(localStorage.getItem(key));
+        if (!draft || key !== 'galata_issue_' + draft.id ||
+            issues.some(existing => existing.id === draft.id)) continue;
+        issues.push({ id: draft.id, month: draft.month, year: draft.year,
+          issueNumber: draft.issueNumber, title: draft.month + ' ' + draft.year,
+          totalArticles: (draft.articles || []).length, localDraft: true });
+      } catch (err) {
+        console.warn('Geçersiz yerel taslak atlandı:', key, err.message);
+      }
+    }
+    issues.sort((a, b) => (a.issueNumber || 0) - (b.issueNumber || 0));
+  }
   availableIssues = issues;
   updateRuntimeModeBadge();
 
@@ -282,6 +314,7 @@ async function selectIssue(issueId) {
     if (viewport) viewport.scrollTop = 0;
 
     currentIssue = issueData;
+    hasUnsavedChanges = false;
     populateFormsFromModel();
     renderLivePreview();
   } catch (err) {
@@ -787,6 +820,7 @@ function escapeAttr(str) {
  * Triggers live A4 preview rendering with debouncing
  */
 function queuePreviewRender() {
+  hasUnsavedChanges = true;
   syncModelFromForms();
   if (renderDebounceTimer) clearTimeout(renderDebounceTimer);
   renderDebounceTimer = setTimeout(renderLivePreview, 120);
@@ -837,7 +871,11 @@ function renderLivePreview() {
     // Reapply current zoom
     applyZoom();
   } catch (err) {
-    mountContainer.innerHTML = `<div style="padding:40px; color:#EF4444;">Mizanpaj oluşturma hatası: ${err.message}</div>`;
+    mountContainer.replaceChildren();
+    const errorBox = document.createElement('div');
+    errorBox.style.cssText = 'padding:40px; color:#EF4444;';
+    errorBox.textContent = 'Mizanpaj oluşturma hatası: ' + err.message;
+    mountContainer.appendChild(errorBox);
   }
 }
 
@@ -1158,46 +1196,49 @@ function validateIssueBeforeSave(data) {
  * - Static Mode: Persists in localStorage and offers direct "JSON İndir".
  */
 async function saveCurrentIssue() {
-  if (!currentIssue || !currentIssue.id) return;
+  if (!currentIssue || !currentIssue.id) return null;
   syncModelFromForms();
-
   try {
     validateIssueBeforeSave(currentIssue);
-  } catch (valErr) {
-    showToast(valErr.message, 'error');
-    return;
+  } catch (err) {
+    showToast(err.message, 'error');
+    return null;
   }
 
+  let serverSaveFailed = false;
   if (activeRuntimeMode === 'local') {
     try {
-      const res = await fetch(`/api/issues/${encodeURIComponent(currentIssue.id)}`, {
+      const res = await fetch('/api/issues/' + encodeURIComponent(currentIssue.id), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json; charset=utf-8' },
         body: JSON.stringify(currentIssue, null, 2)
       });
-
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Kaydetme işlemi başarısız.');
-
-      showToast('Bülten sunucuya başarıyla kaydedildi!', 'success');
+      hasUnsavedChanges = false;
+      showToast('Bülten yerel sunucudaki JSON dosyasına kaydedildi.', 'success');
       renderLivePreview();
-      return;
+      return 'server';
     } catch (err) {
-      console.warn('Yerel sunucuya kaydedilemedi, localStorage moduna geçiliyor:', err.message);
+      serverSaveFailed = true;
+      console.warn('Sunucu kaydı başarısız; yalnız tarayıcı taslağı korunacak:', err.message);
     }
   }
 
-  // Static Mode Persistence
   try {
-    const key = `galata_issue_${currentIssue.id}`;
-    localStorage.setItem(key, JSON.stringify(currentIssue, null, 2));
-    localStorage.setItem(`galata_issue_timestamp_${currentIssue.id}`, new Date().toISOString());
-
-    showToast('Değişiklikler tarayıcı hafızasına (localStorage) kaydedildi! "JSON İndir" ile dosyayı alabilirsiniz.', 'success');
+    localStorage.setItem('galata_issue_' + currentIssue.id, JSON.stringify(currentIssue, null, 2));
+    localStorage.setItem('galata_issue_timestamp_' + currentIssue.id, new Date().toISOString());
+    hasUnsavedChanges = false;
+    showToast(serverSaveFailed
+      ? 'Sunucuya kaydedilemedi! Yalnız tarayıcıda taslak var. JSON dosyasını indirin.'
+      : 'Tarayıcı taslağı kaydedildi. GitHub ve resmî PDF güncellenmedi.',
+      serverSaveFailed ? 'error' : 'info');
     renderLivePreview();
     updateIssueSelectOption(currentIssue.id, true);
+    return 'draft';
   } catch (err) {
-    showToast(`Kaydetme Hatası: ${err.message}`, 'error');
+    showToast('Kaydetme Hatası: ' + err.message + ' — JSON İndir ile yedek almayı deneyin.', 'error');
+    return null;
   }
 }
 
@@ -1216,47 +1257,49 @@ function updateIssueSelectOption(issueId, isModified) {
  * - Static Mode: Opens or downloads the pre-rendered official PDF from output/*.pdf.
  *   Provides window.print() as an additional interactive fallback for custom changes.
  */
+function printCurrentIssue() {
+  if (!currentIssue) return;
+  syncModelFromForms();
+  renderLivePreview();
+  window.print();
+}
+
 async function exportPdf() {
   if (!currentIssue || !currentIssue.id) return;
-  await saveCurrentIssue();
 
-  if (activeRuntimeMode === 'local') {
-    showToast('Chrome Headless PDF motoru çalıştırılıyor... Lütfen bekleyin.', 'info');
+  // A published PDF is immutable; any edit or browser draft needs freshly printed pages.
+  const draftExists = Boolean(localStorage.getItem('galata_issue_' + currentIssue.id));
+  const officialPdfName = ISSUE_PDF_MAP[currentIssue.id];
+  if (activeRuntimeMode === 'static' && !hasUnsavedChanges && !draftExists && officialPdfName) {
+    const a = document.createElement('a');
+    a.href = resolveAppPath('output/' + officialPdfName);
+    a.download = officialPdfName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    showToast('Değiştirilmemiş resmî PDF indiriliyor.', 'info');
+    return;
+  }
+
+  const saveResult = await saveCurrentIssue();
+  if (!saveResult) return;
+  if (saveResult === 'server') {
     try {
-      const res = await fetch(`/api/export-pdf/${encodeURIComponent(currentIssue.id)}`, {
-        method: 'POST'
-      });
+      const res = await fetch('/api/export-pdf/' + encodeURIComponent(currentIssue.id), { method: 'POST' });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'PDF üretilemedi.');
-
-      showToast('A4 PDF başarıyla üretildi!', 'success');
-      if (data.outputPdf) {
-        window.open(data.outputPdf, '_blank');
-      }
+      if (!res.ok || !data.outputPdf) throw new Error(data.error || 'PDF çıktısı oluşturulmadı.');
+      showToast('Güncel içerikten A4 PDF oluşturuldu.', 'success');
+      window.open(data.outputPdf, '_blank');
       return;
     } catch (err) {
-      console.warn('Yerel PDF export başarısız, statik PDF moduna geçiliyor:', err.message);
+      showToast('PDF motoru başarısız: ' + err.message + '. Mevcut PDF korunur; tarayıcıdan PDF kaydedin.', 'error');
+      printCurrentIssue();
+      return;
     }
   }
 
-  // Static Mode PDF Routing
-  const officialPdfName = ISSUE_PDF_MAP[currentIssue.id];
-  if (officialPdfName) {
-    const pdfUrl = resolveAppPath(`output/${officialPdfName}`);
-    showToast('Resmî baskı PDF dosyası indiriliyor...', 'info');
-
-    const a = document.createElement('a');
-    a.href = pdfUrl;
-    a.download = officialPdfName;
-    a.target = '_blank';
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => document.body.removeChild(a), 200);
-  } else {
-    // Fallback for custom user-created months that do not have pre-rendered PDFs
-    showToast('Önceden üretilmiş PDF bulunamadı. Canlı tarayıcı yazdırma aracı açılıyor (PDF Olarak Kaydet seçeneğini kullanınız).', 'info');
-    setTimeout(() => window.print(), 500);
-  }
+  showToast('Bu sayı tarayıcı taslağıdır; eski resmî PDF yerine güncel sayfalar yazdırılacak. Yazdır > PDF olarak kaydet.', 'info');
+  printCurrentIssue();
 }
 
 /**
@@ -1281,8 +1324,8 @@ async function syncWithRotaClub() {
  */
 function readImageAsDataUrl(file) {
   return new Promise((resolve, reject) => {
-    if (!file.type.startsWith('image/')) {
-      return reject(new Error('Lütfen geçerli bir görsel dosyası seçin (JPEG, PNG, WebP).'));
+    if (!/^image\/(?:jpeg|png|webp)$/.test(file.type) || file.size > 6 * 1024 * 1024) {
+      return reject(new Error('Lütfen geçerli bir görsel dosyası seçin (JPEG, PNG, WebP, en çok 6 MiB).'));
     }
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result);
@@ -1321,22 +1364,58 @@ async function uploadImageFile(file, issueFolder) {
 /**
  * Initializes a new month's issue template ("Yeni Ay Başlat" / initMonth / createIssue)
  */
+const MONTH_ENTRIES = [
+  ['Ocak','ocak',1], ['Şubat','subat',2], ['Mart','mart',3],
+  ['Nisan','nisan',4], ['Mayıs','mayis',5], ['Haziran','haziran',6],
+  ['Temmuz','temmuz',7], ['Ağustos','agustos',8], ['Eylül','eylul',9],
+  ['Ekim','ekim',10], ['Kasım','kasim',11], ['Aralık','aralik',12]
+];
+
 async function startNewIssue(payload) {
   try {
-    const res = await fetch('/api/issues/new', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify(payload)
-    });
+    if (activeRuntimeMode === 'local') {
+      const res = await fetch('/api/issues/new', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Yeni ay oluşturulamadı.');
+      closeNewIssueModal();
+      await loadIssuesList(data.issue.id);
+      showToast('Yeni sayı yerel JSON dosyasında taslak olarak oluşturuldu.', 'success');
+      return;
+    }
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Yeni ay oluşturulamadı.');
-
-    showToast(`${data.issue.month} ${data.issue.year} başarıyla başlatıldı!`, 'success');
+    const month = MONTH_ENTRIES.find(entry => entry[0] === payload.month);
+    const year = Number(payload.year);
+    const issueNumber = Number(payload.issueNumber);
+    if (!month || !Number.isInteger(year) || year < 2000 || year > 2100 ||
+        !Number.isInteger(issueNumber) || issueNumber < 1) {
+      throw new Error('Ay, yıl veya sayı numarası geçersiz.');
+    }
+    const id = year + '-' + String(month[2]).padStart(2, '0') + '-' + month[1];
+    if (availableIssues.some(issue => issue.id === id) || localStorage.getItem('galata_issue_' + id)) {
+      throw new Error('Bu aya ait bir bülten zaten mevcut: ' + id);
+    }
+    if (!currentIssue) throw new Error('Künye kopyalanabilecek mevcut sayı bulunamadı.');
+    const base = JSON.parse(JSON.stringify(currentIssue));
+    const rotaryStart = month[2] >= 7 ? year : year - 1;
+    const draft = { ...base, id, month: month[0], year, issueNumber,
+      rotaryYear: rotaryStart + '-' + (rotaryStart + 1),
+      rotaryMonthTheme: payload.rotaryMonthTheme || '',
+      theme: 'KALICI ETKİ YARAT',
+      presidentMessage: { ...(base.presidentMessage || {}), title: month[0] + ' Ayı Başkan Mesajı', body: '' },
+      articles: [],
+      culture: { title: 'Galata Kültür Köşesi', book: { title: '', author: '', cover: '', summary: '' } }
+    };
+    localStorage.setItem('galata_issue_' + id, JSON.stringify(draft));
+    localStorage.setItem('galata_issue_timestamp_' + id, new Date().toISOString());
     closeNewIssueModal();
-    await loadIssuesList(data.issue.id);
+    await loadIssuesList(id);
+    showToast('Yeni sayı tarayıcıda boş taslak olarak oluşturuldu. Kalıcı yayın için JSON indirip depoya ekleyin.', 'info');
   } catch (err) {
-    showToast(`Yeni Ay Hatası: ${err.message}`, 'error');
+    showToast('Yeni Ay Hatası: ' + err.message, 'error');
   }
 }
 
@@ -1353,6 +1432,12 @@ function closeNewIssueModal() {
 /**
  * Attach DOM Event Handlers
  */
+window.addEventListener('beforeunload', event => {
+  if (!hasUnsavedChanges) return;
+  event.preventDefault();
+  event.returnValue = '';
+});
+
 document.addEventListener('DOMContentLoaded', () => {
   // 1. Initial Load
   loadIssuesList();
@@ -1374,6 +1459,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const issueSelect = document.getElementById('issue-select');
   if (issueSelect) {
     issueSelect.addEventListener('change', (e) => {
+      if (hasUnsavedChanges &&
+          !confirm('Kaydedilmemiş değişiklikler var. Sayı değiştirilirse kaybolacak. Devam edilsin mi?')) {
+        e.target.value = currentIssue?.id || '';
+        return;
+      }
       selectIssue(e.target.value);
     });
   }
@@ -1397,6 +1487,12 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-reset-issue')?.addEventListener('click', async () => {
     if (!currentIssue || !currentIssue.id) return;
     if (confirm(`"${currentIssue.month} ${currentIssue.year}" sayısının yerel değişiklikleri silinip orijinal versiyonuna dönülsün mü?`)) {
+      // Automatic recovery download before deleting a browser-only draft.
+      const existingDraft = localStorage.getItem('galata_issue_' + currentIssue.id);
+      if (existingDraft) {
+        try { downloadJSON(JSON.parse(existingDraft), currentIssue.id + '-silinmeden-once-yedek.json'); }
+        catch (err) { showToast('Taslak yedeklenemedi: ' + err.message, 'error'); return; }
+      }
       localStorage.removeItem(`galata_issue_${currentIssue.id}`);
       localStorage.removeItem(`galata_issue_timestamp_${currentIssue.id}`);
       showToast('Yerel değişiklikler temizlendi, orijinal bülten yükleniyor...', 'info');
@@ -1406,7 +1502,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   document.getElementById('btn-export-pdf')?.addEventListener('click', exportPdf);
-  document.getElementById('btn-print')?.addEventListener('click', () => window.print());
+  document.getElementById('btn-print')?.addEventListener('click', printCurrentIssue);
   document.getElementById('btn-rotaclub-sync')?.addEventListener('click', syncWithRotaClub);
   document.getElementById('btn-refresh-preview')?.addEventListener('click', renderLivePreview);
 
@@ -1654,7 +1750,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'p') {
       e.preventDefault();
-      window.print();
+      printCurrentIssue();
       return;
     }
 

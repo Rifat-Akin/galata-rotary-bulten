@@ -27,6 +27,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import {
@@ -69,10 +70,11 @@ const OFFICIAL_PDFS = [
 ];
 
 // Helper to run export-pdf CLI
-function runExportCli(args = []) {
+function runExportCli(args = [], extraEnv = {}) {
   const res = spawnSync(process.execPath, [EXPORT_SCRIPT, ...args], {
     cwd: PROJECT_ROOT,
     encoding: 'utf8',
+    env: { ...process.env, ...extraEnv },
     timeout: 30000
   });
   return {
@@ -275,12 +277,22 @@ async function runAllChallengerM2Tests() {
   );
 
   // 6. Single valid issue export execution check
-  const singleExportRes = runExportCli(['--issue', '2026-07-temmuz']);
-  testAssert(
-    'CLI successfully exports single valid issue with exit code 0',
-    singleExportRes.status === 0,
-    `Status: ${singleExportRes.status}, Error: ${singleExportRes.stderr}`
-  );
+  const isolatedOutput = fs.mkdtempSync(path.join(os.tmpdir(), 'galata-cli-test-'));
+  try {
+    const singleExportRes = runExportCli(['--issue', '2026-07-temmuz'], {
+      GALATA_OUTPUT_DIR: isolatedOutput
+    });
+    const expectedName = OFFICIAL_PDFS[0].fileName;
+    const isolatedPDF = path.join(isolatedOutput, expectedName);
+    testAssert(
+      'CLI produces a valid issue PDF without modifying the publication archive',
+      singleExportRes.status === 0 && fs.existsSync(isolatedPDF) &&
+        fs.statSync(isolatedPDF).size > 100000,
+      `Status: ${singleExportRes.status}, Error: ${singleExportRes.stderr}`
+    );
+  } finally {
+    fs.rmSync(isolatedOutput, { recursive: true, force: true });
+  }
 
   console.log();
 

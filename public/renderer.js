@@ -63,15 +63,15 @@ function escapeHTML(str) {
  */
 function resolveUrl(url, prefix = '') {
   const raw = typeof url === 'string' ? url.trim() : '';
-  if (!raw || /[\\u0000-\\u001f\\u007f]/.test(raw)) return '';
+  if (!raw || [...raw].some(ch => ch.charCodeAt(0) < 32 || ch.charCodeAt(0) === 127)) return '';
 
-  // Editor-supplied image URLs are HTML attribute data, never executable code.
-  // Do not permit scripts, SVG data documents, protocol-relative URLs or traversal.
-  if (/^data:/i.test(raw)) {
-    return /^data:image\\/(?:jpeg|png|webp|gif);base64,[a-z0-9+/=]+$/i.test(raw)
+  // Only passive raster images from HTTPS, safe data URLs or local paths.
+  // Escape as HTML before interpolation in img[src] attributes.
+  if (raw.toLowerCase().startsWith('data:')) {
+    return /^data:image[/](?:jpeg|png|webp|gif);base64,[a-z0-9+/=]+$/i.test(raw)
       ? escapeHTML(raw) : '';
   }
-  if (/^https:\/\//i.test(raw)) {
+  if (raw.toLowerCase().startsWith('https://')) {
     try {
       const parsed = new URL(raw);
       if (parsed.username || parsed.password) return '';
@@ -81,7 +81,7 @@ function resolveUrl(url, prefix = '') {
     return escapeHTML(raw);
   }
   if (/^[a-z][a-z0-9+.-]*:/i.test(raw) || raw.startsWith('//') ||
-      raw.includes('\\\\') || raw.split('/').includes('..')) return '';
+      raw.includes('\\') || raw.split('/').includes('..')) return '';
 
   const base = String(prefix || '');
   const resolved = base.endsWith('/') && raw.startsWith('/') ? base + raw.slice(1)
