@@ -3,6 +3,9 @@
 Tarih: 2026-10-30 (Europe/Istanbul)
 Kod deposu: `Rifat-Akin/galata-rotary-bulten`
 Dal: `fix/production-readiness-20261030`
+PR: https://github.com/Rifat-Akin/galata-rotary-bulten/pull/1
+Notion CURRENT/SAFE TRANSFER: https://app.notion.com/p/4096713212478140a3c0d6dd33eb6de6
+
 Başlangıç ana dal SHA: `e102d44841d9335e07a102e884f202e5779fe941`
 
 ## Hedef

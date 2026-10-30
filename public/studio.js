@@ -270,42 +270,41 @@ async function selectIssue(issueId) {
   try {
     let issueData = null;
 
-    if (activeRuntimeMode === 'local') {
+    // Browser drafts are authoritative until successfully saved to the local API.
+    // In particular, a previous offline PUT failure must not be hidden by a
+    // later successful GET returning the older server copy.
+    const localDraft = localStorage.getItem(`galata_issue_${issueId}`);
+    if (localDraft) {
+      try {
+        const parsed = JSON.parse(localDraft);
+        if (parsed && parsed.id === issueId && Array.isArray(parsed.articles)) {
+          issueData = parsed;
+          showToast('Tarayıcı taslağı kurtarıldı. Sunucu/GitHub henüz bu değişiklikleri içermeyebilir; JSON yedeği alıp kaydedin.', 'info');
+        } else {
+          console.warn('Taslak kimliği veya yapısı geçersiz:', issueId);
+        }
+      } catch (err) {
+        console.error('Tarayıcı taslağı okunamadı:', err.message);
+      }
+    }
+
+    if (!issueData && activeRuntimeMode === 'local') {
       try {
         const res = await fetch(`/api/issues/${encodeURIComponent(issueId)}`);
-        if (res.ok) {
-          issueData = await res.json();
-        } else {
-          throw new Error(`API Hatası (${res.status})`);
-        }
+        if (!res.ok) throw new Error(`API Hatası (${res.status})`);
+        issueData = await res.json();
       } catch (err) {
         console.warn('Yerel API başarısız, statik dosya deneniyor:', err.message);
       }
     }
 
-    // Static Mode or Fallback
     if (!issueData) {
-      // Check localStorage for user-modified drafts
-      const localDraft = localStorage.getItem(`galata_issue_${issueId}`);
-      if (localDraft) {
-        try {
-          issueData = JSON.parse(localDraft);
-          showToast(`"${issueId}" için tarayıcı hafızasındaki yerel taslak yüklendi.`, 'info');
-        } catch (e) {
-          console.error('localStorage JSON parse hatası:', e);
-        }
-      }
-
-      // Fetch static JSON file if not in localStorage
-      if (!issueData) {
-        const staticUrl = resolveAppPath(`data/issues/${issueId}.json`);
-        const res = await fetch(staticUrl);
-        if (!res.ok) throw new Error(`Bülten verisi (${issueId}.json) statik olarak yüklenemedi: HTTP ${res.status}`);
-        issueData = await res.json();
-      }
+      const staticUrl = resolveAppPath(`data/issues/${issueId}.json`);
+      const res = await fetch(staticUrl);
+      if (!res.ok) throw new Error(`Bülten verisi (${issueId}.json) yüklenemedi: HTTP ${res.status}`);
+      issueData = await res.json();
     }
 
-    // Reset Reader Page state on issue switch
     currentReaderPage = 1;
     updateReaderPageIndicator(1);
     const jumpSelect = document.getElementById('reader-page-jump-select');
@@ -1216,6 +1215,13 @@ async function saveCurrentIssue() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Kaydetme işlemi başarısız.');
       hasUnsavedChanges = false;
+      // A recovered offline draft is no longer pending after a verified server save.
+      try {
+        localStorage.removeItem('galata_issue_' + currentIssue.id);
+        localStorage.removeItem('galata_issue_timestamp_' + currentIssue.id);
+      } catch (storageErr) {
+        console.warn('Eski tarayıcı taslağı temizlenemedi:', storageErr.message);
+      }
       showToast('Bülten yerel sunucudaki JSON dosyasına kaydedildi.', 'success');
       renderLivePreview();
       return 'server';
