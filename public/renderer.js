@@ -62,18 +62,32 @@ function escapeHTML(str) {
  * Normalizes relative URLs with optional assetPrefix
  */
 function resolveUrl(url, prefix = '') {
-  if (!url) return '';
-  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
-    return url;
+  const raw = typeof url === 'string' ? url.trim() : '';
+  if (!raw || /[\\u0000-\\u001f\\u007f]/.test(raw)) return '';
+
+  // Editor-supplied image URLs are HTML attribute data, never executable code.
+  // Do not permit scripts, SVG data documents, protocol-relative URLs or traversal.
+  if (/^data:/i.test(raw)) {
+    return /^data:image\\/(?:jpeg|png|webp|gif);base64,[a-z0-9+/=]+$/i.test(raw)
+      ? escapeHTML(raw) : '';
   }
-  // Strip leading slash if prefix ends with one
-  if (prefix.endsWith('/') && url.startsWith('/')) {
-    return prefix + url.slice(1);
+  if (/^https:\/\//i.test(raw)) {
+    try {
+      const parsed = new URL(raw);
+      if (parsed.username || parsed.password) return '';
+    } catch {
+      return '';
+    }
+    return escapeHTML(raw);
   }
-  if (!prefix.endsWith('/') && prefix !== '' && !url.startsWith('/')) {
-    return prefix + '/' + url;
-  }
-  return prefix + url;
+  if (/^[a-z][a-z0-9+.-]*:/i.test(raw) || raw.startsWith('//') ||
+      raw.includes('\\\\') || raw.split('/').includes('..')) return '';
+
+  const base = String(prefix || '');
+  const resolved = base.endsWith('/') && raw.startsWith('/') ? base + raw.slice(1)
+    : base && !base.endsWith('/') && !raw.startsWith('/') ? base + '/' + raw
+    : base + raw;
+  return escapeHTML(resolved);
 }
 
 /**

@@ -155,10 +155,20 @@ const ISSUE_PDF_MAP = {
  * Reads request body as a Buffer
  */
 function readRequestBody(req) {
+  // Bound all JSON and multipart uploads, including chunked requests.
+  const MAX_BODY_BYTES = 8 * 1024 * 1024;
   return new Promise((resolve, reject) => {
     const chunks = [];
-    req.on('data', chunk => chunks.push(chunk));
-    req.on('end', () => resolve(Buffer.concat(chunks)));
+    let total = 0;
+    let exceeded = false;
+    req.on('data', chunk => {
+      total += chunk.length;
+      if (total > MAX_BODY_BYTES) exceeded = true;
+      else if (!exceeded) chunks.push(chunk);
+    });
+    req.on('end', () => exceeded
+      ? reject(Object.assign(new Error('Request body exceeds 8 MiB'), { statusCode: 413 }))
+      : resolve(Buffer.concat(chunks)));
     req.on('error', reject);
   });
 }
@@ -169,9 +179,7 @@ function readRequestBody(req) {
 function sendJSON(res, statusCode, data) {
   res.writeHead(statusCode, {
     'Content-Type': 'application/json; charset=utf-8',
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'X-Content-Type-Options': 'nosniff',
     'Cache-Control': 'no-cache, no-store, must-revalidate'
   });
   res.end(JSON.stringify(data, null, 2));
@@ -183,7 +191,7 @@ function sendJSON(res, statusCode, data) {
 function sendText(res, statusCode, text) {
   res.writeHead(statusCode, {
     'Content-Type': 'text/plain; charset=utf-8',
-    'Access-Control-Allow-Origin': '*'
+    'X-Content-Type-Options': 'nosniff'
   });
   res.end(text);
 }
@@ -213,7 +221,7 @@ function serveStaticFile(res, basePath, relativePath) {
     res.writeHead(200, {
       'Content-Type': contentType,
       'Content-Length': stats.size,
-      'Access-Control-Allow-Origin': '*',
+      'X-Content-Type-Options': 'nosniff',
       'Cache-Control': ext === '.html' ? 'no-cache' : 'public, max-age=3600'
     });
 
@@ -472,15 +480,29 @@ async function handleRequest(req, res) {
   const pathname = decodeURIComponent(parsedUrl.pathname);
   const method = req.method.toUpperCase();
 
-  // CORS preflight
-  if (method === 'OPTIONS') {
-    res.writeHead(204, {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization'
-    });
-    res.end();
-    return;
+  // This is a single-user local editor, not a public publishing API.
+  // Host validation also prevents browser DNS-rebinding attacks on loopback.
+  const host = String(req.headers.host || '');
+  if (!/^(?:localhost|127\\.0\\.0\\.1)(?::[0-9]{1,5})?$/.test(host)) {
+    return sendJSON(res, 403, { error: 'Local editor host required' });
+  }
+  const origin = req.headers.origin;
+  if (origin) {
+    let matchesOrigin = false;
+    try {
+      const source = new URL(origin);
+      matchesOrigin = source.protocol === 'http:' && source.host === host;
+    } catch {}
+    if (!matchesOrigin) return sendJSON(res, 403, { error: 'Cross-origin requests forbidden' });
+  }
+  if (req.headers['sec-fetch-site'] === 'cross-site') {
+    return sendJSON(res, 403, { error: 'Cross-site requests forbidden' });
+  }
+  if (method === 'OPTIONS') return sendJSON(res, 405, { error: 'CORS is disabled on the local editor' });
+  if (['POST', 'PUT', 'PATCH'].includes(method) && pathname !== '/api/upload' &&
+      !String(req.headers['content-type'] || '').startsWith('application/json') &&
+      pathname !== '/api/rotaclub/sync' && !pathname.startsWith('/api/export-pdf/')) {
+    return sendJSON(res, 415, { error: 'Expected application/json Content-Type' });
   }
 
   // --------------------------------------------------------------------------
@@ -598,8 +620,20 @@ async function handleRequest(req, res) {
         issueData.theme = 'KALICI ETKİ YARAT';
       }
 
+      if (!issueData || Array.isArray(issueData) || typeof issueData !== 'object' ||
+          issueData.id !== safeIssueId || !Array.isArray(issueData.articles)) {
+        return sendJSON(res, 422, { error: 'Issue ID mismatch or invalid article structure' });
+      }
+
       fs.mkdirSync(DATA_DIR, { recursive: true });
-      fs.writeFileSync(filePath, JSON.stringify(issueData, null, 2), 'utf8');
+      // Stage first so a partial write cannot destroy an existing issue.
+      const stagedPath = filePath + '.tmp-' + process.pid;
+      try {
+        fs.writeFileSync(stagedPath, JSON.stringify(issueData, null, 2), { encoding: 'utf8', flag: 'wx' });
+        fs.renameSync(stagedPath, filePath);
+      } finally {
+        if (fs.existsSync(stagedPath)) fs.unlinkSync(stagedPath);
+      }
 
       return sendJSON(res, 200, {
         success: true,
@@ -608,7 +642,7 @@ async function handleRequest(req, res) {
         issue: issueData
       });
     } catch (err) {
-      return sendJSON(res, 500, { error: 'Failed to save issue', details: err.message });
+      return sendJSON(res, err.statusCode || 500, { error: 'Failed to save issue', details: err.message });
     }
   }
 
@@ -705,16 +739,30 @@ async function handleRequest(req, res) {
       }
 
       // 2. Sanitize filename using path.basename and validate extension
-      const ALLOWED_PHOTO_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.svg']);
+      const ALLOWED_PHOTO_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp']);
       const cleanBasename = path.basename(String(rawFilename || '')).trim();
       const rawExt = path.extname(cleanBasename);
       const ext = rawExt.toLowerCase();
 
       if (!ext || !ALLOWED_PHOTO_EXTENSIONS.has(ext)) {
         return sendJSON(res, 400, {
-          error: `Invalid file extension "${ext}". Allowed extensions: .jpg, .jpeg, .png, .webp, .svg`
+          error: `Invalid file extension "${ext}". Allowed extensions: .jpg, .jpeg, .png, .webp`
         });
       }
+
+      if (!fileBuffer || fileBuffer.length === 0 || fileBuffer.length > 6 * 1024 * 1024) {
+        return sendJSON(res, 413, { error: 'Image must be between 1 byte and 6 MiB' });
+      }
+      const isJpeg = fileBuffer.length > 3 && fileBuffer[0] === 0xff &&
+        fileBuffer[1] === 0xd8 && fileBuffer[2] === 0xff;
+      const isPng = fileBuffer.length > 8 &&
+        fileBuffer.subarray(0, 8).equals(Buffer.from([137,80,78,71,13,10,26,10]));
+      const isWebp = fileBuffer.length > 12 &&
+        fileBuffer.toString('ascii', 0, 4) === 'RIFF' &&
+        fileBuffer.toString('ascii', 8, 12) === 'WEBP';
+      const validImage = (['.jpg','.jpeg'].includes(ext) && isJpeg) ||
+        (ext === '.png' && isPng) || (ext === '.webp' && isWebp);
+      if (!validImage) return sendJSON(res, 415, { error: 'File extension and image signature disagree' });
 
       const stemRaw = cleanBasename.slice(0, cleanBasename.length - rawExt.length);
       const sanitizedStem = stemRaw.replace(/[^a-zA-Z0-9_-]/g, '_').replace(/^_+|_+$/g, '');
@@ -743,7 +791,7 @@ async function handleRequest(req, res) {
         filename: finalFilename
       });
     } catch (err) {
-      return sendJSON(res, 500, { error: 'Image upload failed', details: err.message });
+      return sendJSON(res, err.statusCode || 500, { error: 'Image upload failed', details: err.message });
     }
   }
 
@@ -803,26 +851,9 @@ async function handleRequest(req, res) {
     }
   }
 
-  // POST /api/rotaclub/sync -> mock RotaClub synchronization
+  // No fabricated integration success: requires a real RotaClub API contract.
   if (method === 'POST' && pathname === '/api/rotaclub/sync') {
-    try {
-      const files = fs.existsSync(DATA_DIR) ? fs.readdirSync(DATA_DIR).filter(f => f.endsWith('.json') && f !== 'index.json') : [];
-      return sendJSON(res, 200, {
-        success: true,
-        message: 'RotaClub veri senkronizasyonu tamamlandı.',
-        syncedCount: files.length,
-        syncedIssues: files.map(f => path.basename(f, '.json')),
-        timestamp: new Date().toISOString(),
-        club: {
-          name: "Galata Rotary Kulübü",
-          district: "UR 2420. Bölge",
-          clubNo: "64336",
-          status: "Aktif"
-        }
-      });
-    } catch (err) {
-      return sendJSON(res, 500, { error: 'RotaClub sync error', details: err.message });
-    }
+    return sendJSON(res, 501, { error: 'RotaClub entegrasyonu henüz yapılandırılmadı.' });
   }
 
   // --------------------------------------------------------------------------
@@ -868,7 +899,7 @@ export function startServer(port = DEFAULT_PORT, attempt = 0) {
       }
     });
 
-    server.listen(port, '0.0.0.0', () => {
+    server.listen(port, '127.0.0.1', () => {
       const activePort = server.address().port;
       console.log(`========================================================================`);
       console.log(`  GALATA ROTARY BÜLTEN STÜDYOSU (Web & API Server)`);
