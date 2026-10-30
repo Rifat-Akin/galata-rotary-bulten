@@ -12,18 +12,16 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import http from 'node:http';
-import { execFile } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { promisify } from 'node:util';
 import { renderIssueToHTML } from '../public/renderer.js';
-
-const execFileAsync = promisify(execFile);
+import { printPageToPDF } from './chrome-cdp-print.mjs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, '..');
 const dataDir = path.join(projectRoot, 'data', 'issues');
 const publicDir = path.join(projectRoot, 'public');
-const outputDir = path.join(projectRoot, 'output');
+const outputDir = process.env.GALATA_OUTPUT_DIR
+  ? path.resolve(process.env.GALATA_OUTPUT_DIR) : path.join(projectRoot, 'output');
 
 // Official Output Filename Mapping
 const ISSUE_PDF_MAP = {
@@ -70,6 +68,10 @@ export function cleanupStaleTempProfiles() {
       if (entry.startsWith('galata-pdf-chrome-')) {
         const fullPath = path.join(tmp, entry);
         try {
+          const stat = fs.lstatSync(fullPath);
+          // Leave concurrent jobs alone; only prune interrupted profiles after a day.
+          if (!stat.isDirectory() || stat.isSymbolicLink() ||
+              Date.now() - stat.mtimeMs < 24 * 60 * 60 * 1000) continue;
           fs.rmSync(fullPath, { recursive: true, force: true, maxRetries: 2, retryDelay: 50 });
         } catch {
           // May be locked by an active process
@@ -147,6 +149,8 @@ const MIME_TYPES = {
  */
 export function findChromeBinary() {
   const candidates = [
+    // Browser installed in a Playwright cache or non-standard runner location
+    process.env.GALATA_CHROME_BIN || null,
     // Windows Google Chrome
     process.env['PROGRAMFILES'] ? path.join(process.env['PROGRAMFILES'], 'Google', 'Chrome', 'Application', 'chrome.exe') : null,
     process.env['PROGRAMFILES(X86)'] ? path.join(process.env['PROGRAMFILES(X86)'], 'Google', 'Chrome', 'Application', 'chrome.exe') : null,
@@ -322,47 +326,35 @@ export async function exportIssueToPDF(rawIssueId, options = {}) {
   const destPdfPath = path.resolve(targetDir, pdfFileName);
 
   // Guarantee destination path is strictly within targetDir
-  if (!destPdfPath.startsWith(path.resolve(targetDir))) {
+  if (!destPdfPath.startsWith(path.resolve(targetDir) + path.sep)) {
     throw new Error(`Target PDF path traverses outside output directory: ${destPdfPath}`);
   }
 
+  // Never let an incomplete Chrome export overwrite or delete a published PDF.
+  const stagedPdfPath = path.join(targetDir, '.galata-pdf-stage-' +
+    process.pid + '-' + Date.now() + '.pdf');
   const renderUrl = `http://127.0.0.1:${port}/render?issue=${encodeURIComponent(issueId)}`;
   const tmpProfileDir = fs.mkdtempSync(path.join(os.tmpdir(), 'galata-pdf-chrome-'));
   activeTempDirs.add(tmpProfileDir);
-
-  const chromeFlags = [
-    '--headless=new',
-    '--disable-gpu',
-    '--no-first-run',
-    '--no-default-browser-check',
-    '--disable-component-update',
-    '--disable-background-networking',
-    '--disable-breakpad',
-    '--disable-crash-reporter',
-    '--no-pdf-header-footer',
-    '--run-all-compositor-stages-before-draw',
-    '--virtual-time-budget=2000',
-    `--user-data-dir=${tmpProfileDir}`,
-    `--print-to-pdf=${destPdfPath}`,
-    renderUrl
-  ];
-
-  if (os.platform() === 'linux') {
-    chromeFlags.push('--no-sandbox', '--disable-setuid-sandbox');
-  }
 
   console.log(`[export-pdf] Exporting "${issueId}" -> "${pdfFileName}"...`);
   const startTime = Date.now();
 
   try {
-    try {
-      await execFileAsync(chromePath, chromeFlags, { timeout: 45000 });
-    } catch (err) {
-      throw new Error(`Chrome headless PDF generation failed for "${issueId}": ${err.message}`);
-    }
+    const result = await printPageToPDF({
+      chromePath,
+      url: renderUrl,
+      outputPath: stagedPdfPath,
+      profileDir: tmpProfileDir
+    });
 
     const duration = ((Date.now() - startTime) / 1000).toFixed(2);
-    const inspection = inspectPDF(destPdfPath);
+    const inspection = inspectPDF(stagedPdfPath);
+    if (result.expectedPages !== inspection.pageCount) {
+      throw new Error(`PDF page mismatch: DOM=${result.expectedPages} PDF=${inspection.pageCount}`);
+    }
+    // Validate staged output before atomically replacing last known good issue.
+    fs.renameSync(stagedPdfPath, destPdfPath);
 
     console.log(`[export-pdf] ✔ Created ${pdfFileName} (${inspection.sizeMB} MB, ${inspection.pageCount} pages, ${duration}s)`);
 
@@ -373,17 +365,10 @@ export async function exportIssueToPDF(rawIssueId, options = {}) {
       ...inspection,
       duration
     };
-  } catch (err) {
-    // Failure cleanup: ensure any partial or corrupted PDF file in output/ is immediately unlinked
-    if (fs.existsSync(destPdfPath)) {
-      try {
-        fs.unlinkSync(destPdfPath);
-      } catch (unlinkErr) {
-        console.warn(`[export-pdf] Warning: Failed to clean up corrupted PDF ${destPdfPath}:`, unlinkErr.message);
-      }
-    }
-    throw err;
   } finally {
+    if (fs.existsSync(stagedPdfPath)) {
+      try { fs.unlinkSync(stagedPdfPath); } catch {}
+    }
     activeTempDirs.delete(tmpProfileDir);
     try {
       fs.rmSync(tmpProfileDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });

@@ -776,6 +776,52 @@ async function runDualModeClientTests() {
     assert(!staticFetchCalls.some(u => u.includes('2026-09-eylul.json')), 'Network fetch for issue JSON is bypassed when local draft exists');
   }
 
+  // Test 2.13: A recovered offline draft must win over an outdated local GET.
+  // A successful subsequent PUT removes the pending draft, preventing stale replay.
+  {
+    let apiReads = 0;
+    let serverWrite = null;
+    const recovered = createStudioSandbox({
+      origin: 'http://localhost:3420',
+      pathname: '/',
+      hostname: 'localhost',
+      fetchHandler: async (url, options = {}) => {
+        if (String(url).includes('/api/issues/') && options.method === 'PUT') {
+          serverWrite = JSON.parse(options.body);
+          return { ok: true, status: 200, json: async () => ({ success: true }) };
+        }
+        if (String(url).includes('/api/issues/')) {
+          apiReads++;
+          return { ok: true, status: 200, json: async () => ({
+            id: '2026-09-eylul', month: 'Eylül', theme: 'KALICI ETKİ YARAT',
+            articles: [{ title: 'Eski Sunucu Sürümü', photos: [] }]
+          }) };
+        }
+        return { ok: false, status: 404, json: async () => ({ error: 'Not found' }) };
+      }
+    });
+    recovered.setRuntimeMode('local');
+    recovered.localStorage.setItem('galata_issue_2026-09-eylul', JSON.stringify({
+      id: '2026-09-eylul', month: 'Eylül', year: 2026,
+      theme: 'KALICI ETKİ YARAT',
+      articles: [{ title: 'Kurtarılması Gereken Tarayıcı Taslağı', photos: [] }]
+    }));
+    recovered.localStorage.setItem('galata_issue_timestamp_2026-09-eylul', new Date().toISOString());
+
+    await recovered.context.selectIssue('2026-09-eylul');
+    assert(recovered.getCurrentIssue().articles[0].title === 'Kurtarılması Gereken Tarayıcı Taslağı',
+      'Local API mode restores a previously failed offline draft, not stale server JSON');
+    assert(apiReads === 0, 'Recovered offline draft is not overwritten by a local GET');
+
+    await recovered.context.saveCurrentIssue();
+    assert(serverWrite?.articles?.[0]?.title === 'Kurtarılması Gereken Tarayıcı Taslağı',
+      'Recovered draft is actually submitted to local REST PUT on save');
+    assert(recovered.localStorage.getItem('galata_issue_2026-09-eylul') === null,
+      'Successful server save clears the previously pending browser draft');
+    assert(recovered.localStorage.getItem('galata_issue_timestamp_2026-09-eylul') === null,
+      'Successful server save clears pending draft timestamp');
+  }
+
   console.log();
 
   // --------------------------------------------------------------------------

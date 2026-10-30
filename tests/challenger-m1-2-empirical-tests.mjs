@@ -46,6 +46,7 @@ const MIME_TYPES = {
 
 function findChromeBinary() {
   const candidates = [
+    process.env.GALATA_CHROME_BIN || null,
     process.env['PROGRAMFILES'] ? path.join(process.env['PROGRAMFILES'], 'Google', 'Chrome', 'Application', 'chrome.exe') : null,
     process.env['PROGRAMFILES(X86)'] ? path.join(process.env['PROGRAMFILES(X86)'], 'Google', 'Chrome', 'Application', 'chrome.exe') : null,
     process.env['LOCALAPPDATA'] ? path.join(process.env['LOCALAPPDATA'], 'Google', 'Chrome', 'Application', 'chrome.exe') : null,
@@ -255,11 +256,16 @@ async function runEmpiricalChallengeSuite() {
   console.log(`  ℹ Test HTTP server listening on http://127.0.0.1:${port}`);
 
   const tempUserDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'chrome-m1-2-'));
-  const cdpPort = port > 60000 ? (port - 2000 - Math.floor(Math.random() * 500)) : (port + 1000 + Math.floor(Math.random() * 500));
+  // Chrome allocates its own free DevTools port. Guessing another port relative
+  // to the web server was flaky on GitHub-hosted runners (CI run #41103465052).
+  // The Chrome-owned DevToolsActivePort file identifies the exact bound port.
+  const devToolsFile = path.join(tempUserDataDir, 'DevToolsActivePort');
+  let chromeDiagnostics = '';
 
   const chromeProc = spawn(chromeBin, [
     '--headless=new',
-    `--remote-debugging-port=${cdpPort}`,
+    ...(os.platform() === 'linux' ? ['--no-sandbox', '--disable-dev-shm-usage'] : []),
+    '--remote-debugging-port=0',
     '--remote-debugging-address=127.0.0.1',
     `--user-data-dir=${tempUserDataDir}`,
     '--disable-gpu',
@@ -271,21 +277,36 @@ async function runEmpiricalChallengeSuite() {
     '--disable-crash-reporter',
     '--window-size=1280,900',
     `http://127.0.0.1:${port}/index.html`
-  ], { stdio: ['ignore', 'pipe', 'pipe'] });
+  ], { stdio: ['ignore', 'ignore', 'pipe'] });
+  chromeProc.stderr?.on('data', chunk => {
+    if (chromeDiagnostics.length < 2400) {
+      chromeDiagnostics += String(chunk).slice(0, 2400 - chromeDiagnostics.length);
+    }
+  });
 
   let session = null;
 
   try {
-    // Wait for CDP port to open and fetch page target
     let wsUrl = null;
-    for (let i = 0; i < 45; i++) {
-      await new Promise(r => setTimeout(r, 200));
+    let actualPort = null;
+    const startDeadline = Date.now() + 25000;
+    while (Date.now() < startDeadline) {
+      await new Promise(r => setTimeout(r, 175));
+      if (chromeProc.exitCode !== null) break;
+      if (!fs.existsSync(devToolsFile)) continue;
+      const portLine = fs.readFileSync(devToolsFile, 'utf8').split(/\r?\n/)[0];
+      const detectedPort = Number(portLine);
+      if (!Number.isInteger(detectedPort) || detectedPort <= 0 ||
+          detectedPort > 65535) continue;
+      actualPort = detectedPort;
       try {
-        const res = await fetch(`http://127.0.0.1:${cdpPort}/json/list`);
+        const res = await fetch(`http://127.0.0.1:${actualPort}/json/list`, {
+          signal: AbortSignal.timeout(1400)
+        });
         if (res.ok) {
           const targets = await res.json();
           const pageTarget = targets.find(t => t.type === 'page');
-          if (pageTarget && pageTarget.webSocketDebuggerUrl) {
+          if (pageTarget?.webSocketDebuggerUrl) {
             wsUrl = pageTarget.webSocketDebuggerUrl;
             break;
           }
@@ -293,7 +314,8 @@ async function runEmpiricalChallengeSuite() {
       } catch {}
     }
 
-    assert('Chrome started and CDP WebSocket opened', !!wsUrl, `Port: ${cdpPort}`);
+    assert('Chrome started and CDP WebSocket opened', !!wsUrl,
+      `Chrome port: ${actualPort ?? 'unavailable'}; exit: ${chromeProc.exitCode}; ${chromeDiagnostics.slice(-700)}`);
 
     if (wsUrl) {
       session = new ChromeSession(wsUrl);
