@@ -448,17 +448,23 @@ html, body {
 /* Galata Silhouette Footer Vector */
 .cover-silhouette-wrap {
   width: 100%;
-  height: 18mm;
+  height: 38mm;
+  min-height: 38mm;
+  flex: 0 0 38mm;
   overflow: hidden;
   margin-top: auto;
   border-top: 1px solid var(--color-border-subtle);
   padding-top: 1mm;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
 }
 
 .cover-silhouette-svg {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center bottom;
   display: block;
 }
 
@@ -1096,3 +1102,17 @@ html, body {
   letter-spacing: 1px;
   text-transform: uppercase;
 }
+
+/* Print editorial QA: keep the issue masthead clearly separated and readable. */
+.cover-issue-ribbon {
+  display: grid;
+  grid-template-columns: 70px 142px minmax(0, 1fr);
+  align-items: center;
+  column-gap: 10px;
+  min-height: 16mm;
+  padding: 2.5mm 4mm;
+}
+.cover-issue-ribbon > * { min-width: 0; }
+.ribbon-month-year { line-height: 1.18; font-size: 11pt; overflow-wrap: normal; }
+.ribbon-issue-badge { display: block; border-radius: 4px; padding: 4px 8px; font-size: 8pt; line-height: 1.25; }
+.ribbon-theme-tag { font-size: 7.3pt; line-height: 1.3; overflow-wrap: break-word; }
