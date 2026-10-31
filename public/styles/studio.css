@@ -1417,3 +1417,40 @@ body.mode-reader-active .a4-page {
     break-after: page !important;
   }
 }
+
+/* Release QA: dashboard controls must not collide in the top navigation. */
+@media screen and (min-width: 901px) {
+  :root { --studio-header-height: 112px; }
+  .studio-header {
+    display: grid;
+    grid-template-columns: minmax(245px, 1fr) minmax(350px, 1.5fr);
+    grid-template-rows: 44px 44px;
+    gap: 6px 12px;
+    height: var(--studio-header-height);
+    padding: 8px 18px;
+    align-content: center;
+  }
+  .studio-brand { grid-column: 1; grid-row: 1; min-width: 0; }
+  .studio-header-center {
+    grid-column: 2; grid-row: 1; justify-content: flex-end;
+    flex-wrap: wrap; gap: 6px; min-width: 0;
+  }
+  .studio-mode-switch { grid-column: 1; grid-row: 2; justify-self: start; }
+  .studio-header-actions {
+    grid-column: 2; grid-row: 2; justify-content: flex-end;
+    min-width: 0; gap: 5px; flex-wrap: wrap;
+  }
+  .studio-header-actions .btn {
+    padding: 6px 8px; font-size: 11px; white-space: nowrap;
+  }
+  .page-count-badge, .overflow-status-badge, .runtime-mode-badge { white-space: nowrap; }
+}
+@media screen and (min-width: 901px) and (max-width: 1330px) {
+  :root { --studio-header-height: 148px; }
+  .studio-header { grid-template-rows: 42px 38px 48px; }
+  .studio-brand { grid-column: 1; grid-row: 1; }
+  .studio-header-center { grid-column: 2; grid-row: 1; }
+  .studio-mode-switch { grid-column: 1 / 3; grid-row: 2; }
+  .studio-header-actions { grid-column: 1 / 3; grid-row: 3; justify-content: flex-start; }
+  .studio-app-subtitle { display: none; }
+}

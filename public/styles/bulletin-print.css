@@ -448,17 +448,23 @@ html, body {
 /* Galata Silhouette Footer Vector */
 .cover-silhouette-wrap {
   width: 100%;
-  height: 18mm;
+  height: 38mm;
+  min-height: 38mm;
+  flex: 0 0 38mm;
   overflow: hidden;
   margin-top: auto;
   border-top: 1px solid var(--color-border-subtle);
   padding-top: 1mm;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
 }
 
 .cover-silhouette-svg {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center bottom;
   display: block;
 }
 
