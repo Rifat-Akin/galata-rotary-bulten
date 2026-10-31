@@ -1102,3 +1102,17 @@ html, body {
   letter-spacing: 1px;
   text-transform: uppercase;
 }
+
+/* Print editorial QA: keep the issue masthead clearly separated and readable. */
+.cover-issue-ribbon {
+  display: grid;
+  grid-template-columns: 70px 142px minmax(0, 1fr);
+  align-items: center;
+  column-gap: 10px;
+  min-height: 16mm;
+  padding: 2.5mm 4mm;
+}
+.cover-issue-ribbon > * { min-width: 0; }
+.ribbon-month-year { line-height: 1.18; font-size: 11pt; overflow-wrap: normal; }
+.ribbon-issue-badge { display: block; border-radius: 4px; padding: 4px 8px; font-size: 8pt; line-height: 1.25; }
+.ribbon-theme-tag { font-size: 7.3pt; line-height: 1.3; overflow-wrap: break-word; }
