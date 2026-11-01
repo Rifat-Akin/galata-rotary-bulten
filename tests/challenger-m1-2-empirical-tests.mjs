@@ -786,6 +786,53 @@ async function runEmpiricalChallengeSuite() {
         mobile: false
       });
 
+      // Laptop split-view acceptance: the earlier 1160px toolbar was clipped
+      // inside a 451-990px editor pane even when document overflow was zero.
+      for (const width of [901, 1024, 1199, 1200, 1440]) {
+        await session.send('Emulation.setDeviceMetricsOverride', {
+          width, height: 900, deviceScaleFactor: 1, mobile: false
+        });
+        const toolbar = await session.eval(`(() => {
+          const visible = (el) => {
+            if (!el) return false;
+            for (let p=el; p && p.nodeType===1; p=p.parentElement) {
+              const style=getComputedStyle(p);
+              if (style.display==='none' || style.visibility==='hidden') return false;
+            }
+            return el.getClientRects().length>0;
+          };
+          const pane=document.getElementById('preview-pane');
+          const nav=document.getElementById('reader-navigation-bar');
+          const refresh=document.getElementById('btn-refresh-preview');
+          const zoom=document.querySelector('.zoom-toolbar');
+          const within = (el) => {
+            if (!visible(el)) return false;
+            const e=el.getBoundingClientRect(), p=pane.getBoundingClientRect();
+            return e.left>=p.left-1 && e.right<=p.right+1;
+          };
+          const editor={navHidden:!visible(nav),refreshVisible:within(refresh),
+            noToolbarClip:zoom.scrollWidth<=zoom.clientWidth+1};
+          document.getElementById('btn-mode-reader').click();
+          const reader={navVisible:visible(nav),navFits:within(nav),
+            refreshVisible:within(refresh),
+            noToolbarClip:zoom.scrollWidth<=zoom.clientWidth+1};
+          document.getElementById('btn-mode-editor').click();
+          return {editor,reader};
+        })()`);
+        assert('Laptop '+width+'px editor: no clipped preview toolbar or phantom reader nav',
+          toolbar?.editor?.navHidden &&
+          toolbar?.editor?.refreshVisible &&
+          toolbar?.editor?.noToolbarClip, JSON.stringify(toolbar));
+        assert('Laptop '+width+'px reader: nav, jump and refresh fit inside viewport',
+          toolbar?.reader?.navVisible &&
+          toolbar?.reader?.navFits &&
+          toolbar?.reader?.refreshVisible &&
+          toolbar?.reader?.noToolbarClip, JSON.stringify(toolbar));
+      }
+      await session.send('Emulation.setDeviceMetricsOverride', {
+        width: 1280, height: 900, deviceScaleFactor: 1, mobile: false
+      });
+
       // Audit the desktop sidebar, dialog semantics and focus restoration.
       const desktopUi = await session.eval(`(() => {
         const tabs = document.querySelector('.editor-tabs-bar');
