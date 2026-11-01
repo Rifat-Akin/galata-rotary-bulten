@@ -18,6 +18,10 @@ let isNavigating = false;
 let navigationTimer = null;
 let overflowCycleIndex = 0;
 
+// Asset release token: PDF downloads must not reuse a stale browser cache
+// after a new GitHub Pages publish. Keep synced with the module URLs in index.html.
+const PUBLIC_RELEASE_TAG = '20261101-editorial7';
+
 // Official Pre-Rendered PDF Mapping
 const ISSUE_PDF_MAP = {
   '2026-07-temmuz': 'Galata_Rotary_Bulten_2026_07_Temmuz_Sayi_1.pdf',
@@ -1278,7 +1282,7 @@ async function exportPdf() {
   const officialPdfName = ISSUE_PDF_MAP[currentIssue.id];
   if (activeRuntimeMode === 'static' && !hasUnsavedChanges && !draftExists && officialPdfName) {
     const a = document.createElement('a');
-    a.href = resolveAppPath('output/' + officialPdfName);
+    a.href = resolveAppPath('output/' + officialPdfName + '?v=' + PUBLIC_RELEASE_TAG);
     a.download = officialPdfName;
     document.body.appendChild(a);
     a.click();

@@ -69,6 +69,19 @@ test('typography, culture features and cache version are designed for readable A
   assert.match(studio, /styles\/studio\.css\?v=20261101-editorial6/);
 });
 
+test('Pages uses cache-versioned modules and officially downloaded PDFs', () => {
+  const controller = fs.readFileSync(path.join(root, 'public/studio.js'), 'utf8');
+  const tag = '20261101-editorial7';
+  assert.ok(studio.includes('src="renderer.js?v=' + tag + '"'),
+    'renderer module must bypass cached pre-release JavaScript');
+  assert.ok(studio.includes('src="studio.js?v=' + tag + '"'),
+    'editor controller must bypass cached pre-release JavaScript');
+  assert.ok(controller.includes("const PUBLIC_RELEASE_TAG = '" + tag + "'"),
+    'official PDF cache revision should match the visible JavaScript release');
+  assert.ok(controller.includes("'output/' + officialPdfName + '?v=' + PUBLIC_RELEASE_TAG"),
+    'direct PDF downloads must bypass stale browser cache');
+});
+
 test('CDP printer rejects clipped gallery captions, cropped photos and empty media area', () => {
   assert.match(printer, /Visual layout acceptance failed/);
   assert.match(printer, /Article gallery leaves most of its page blank/);
