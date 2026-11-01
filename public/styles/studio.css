@@ -1650,3 +1650,39 @@ body.mode-reader-active .a4-page {
 @media screen and (min-width: 901px) {
   .studio-header-actions .btn { min-height: 36px; }
 }
+/* 2026-11-02 visual read-back: desktop split view had a 1,160px
+   toolbar inside a 451–990px preview pane. Its clipped page controls
+   belong to Reader Mode; do not trap them inside the Editor preview. */
+@media screen and (min-width: 901px) {
+  body:not(.mode-reader-active) #reader-navigation-bar { display: none; }
+  body:not(.mode-reader-active) .zoom-toolbar { gap: 10px; }
+}
+/* Fit the editor's scale controls without clipping Refresh on narrow laptops. */
+@media screen and (min-width: 901px) and (max-width: 1100px) {
+  body:not(.mode-reader-active) .zoom-slider-container { display: none; }
+}
+@media screen and (min-width: 901px) and (max-width: 1020px) {
+  body:not(.mode-reader-active)
+  .zoom-btn-group button:not(.active):not(#btn-zoom-fit) { display: none; }
+}
+/* The full-width reader gets its own second navigation row when needed;
+   unlike overflow:hidden, all actions remain usable at 901–1199px. */
+@media screen and (min-width: 901px) and (max-width: 1199px) {
+  body.mode-reader-active .zoom-toolbar {
+    height: auto;
+    min-height: 48px;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 12px;
+  }
+  body.mode-reader-active .zoom-left-group {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+  body.mode-reader-active #reader-navigation-bar {
+    flex: 1 1 auto;
+    max-width: 100%;
+    justify-content: center;
+  }
+  body.mode-reader-active #btn-refresh-preview { flex: 0 0 auto; }
+}

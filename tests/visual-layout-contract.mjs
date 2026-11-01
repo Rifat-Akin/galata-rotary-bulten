@@ -66,7 +66,7 @@ test('typography, culture features and cache version are designed for readable A
   assert.match(block('.culture-page-grid .announcements-grid'), /flex:\s*0 0 auto/);
   assert.match(block('.culture-watermark img'), /object-fit:\s*contain/);
   assert.match(studio, /styles\/bulletin-print\.css\?v=20261101-editorial6/);
-  assert.match(studio, /styles\/studio\.css\?v=20261102-ui8/);
+  assert.match(studio, /styles\/studio\.css\?v=20261102-ui9/);
 });
 
 test('Pages uses cache-versioned modules and officially downloaded PDFs', () => {
@@ -97,6 +97,15 @@ test('responsive UI includes named touch actions, visible tabs, modal focus, and
   assert.match(studio, /for="new-issue-month"/);
   assert.match(controller, /function handleNewIssueModalKeydown/);
   assert.match(controller, /needsHorizontalPan/);
+});
+
+test('desktop split preview toolbar keeps zoom and refresh reachable; reader controls get a second row', () => {
+  const shell = fs.readFileSync(path.join(root, 'public/styles/studio.css'), 'utf8');
+  assert.match(shell, /desktop split view had a 1,160px/);
+  assert.match(shell, /body:not\(\.mode-reader-active\) #reader-navigation-bar\s*\{ display: none; \}/);
+  assert.match(shell, /body:not\(\.mode-reader-active\) \.zoom-slider-container\s*\{ display: none; \}/);
+  assert.match(shell, /body\.mode-reader-active \.zoom-toolbar\s*\{[\s\S]*?flex-wrap:\s*wrap/);
+  assert.match(shell, /body\.mode-reader-active #reader-navigation-bar\s*\{[\s\S]*?flex:\s*1 1 auto/);
 });
 
 test('CDP printer rejects clipped gallery captions, cropped photos and empty media area', () => {
