@@ -136,6 +136,27 @@ function renderCoverPage(issue, pageNum, totalPages, options) {
     ? officers.bulletinCommittee.join(', ')
     : (officers.bulletinCommittee || 'Rifat Akın Kaplan, Özgür Kuddar, GDB Polat Özcan');
 
+  // The print cover uses the otherwise empty lower area for a grounded issue
+  // index: every entry is drawn from the actual articles and their print pages.
+  const contentsRows = paginateArticles(issue).flatMap((group, groupIndex) =>
+    group.map(article => ({ title: article.title || '', page: groupIndex + 3 })));
+  const contentsHTML = contentsRows.length ? `
+    <section class="cover-contents" aria-label="Bu Sayıda">
+      <div class="cover-contents-heading">
+        <span>BU SAYIDA</span>
+        <span>${contentsRows.length} HABER • ${totalPages} SAYFA</span>
+      </div>
+      <ol class="cover-contents-list">
+        ${contentsRows.map(item => `
+          <li>
+            <span class="cover-content-title">${escapeHTML(item.title)}</span>
+            <span class="cover-content-page">${item.page}</span>
+          </li>
+        `).join('')}
+      </ol>
+    </section>
+  ` : '';
+
   return `
   <article class="a4-page page-cover" data-page-index="${pageNum}">
     <div class="cover-masthead">
@@ -226,6 +247,8 @@ function renderCoverPage(issue, pageNum, totalPages, options) {
         </ul>
       </div>
     </div>
+
+    ${contentsHTML}
 
     <div class="cover-silhouette-wrap">
       <img src="${silhouetteUrl}" alt="Galata Silüeti" class="cover-silhouette-svg" onerror="this.style.display='none'" />
@@ -666,7 +689,7 @@ export function renderIssueToHTML(issue, options = {}) {
   }
 
   const docTitle = options.title || `Galata Rotary Kulübü Bülteni - ${issue.month || ''} ${issue.year || 2026} (Sayı ${issue.issueNumber || 1})`;
-  const printCssUrl = resolveUrl('styles/bulletin-print.css', prefix);
+  const printCssUrl = resolveUrl('styles/bulletin-print.css?v=20261101-editorial5', prefix);
 
   return `<!DOCTYPE html>
 <html lang="tr">

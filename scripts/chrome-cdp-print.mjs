@@ -108,12 +108,55 @@ async function waitForPrintablePage(session) {
         expression: `(() => {
           const images = [...document.querySelectorAll('img')];
           const pages = document.querySelectorAll('.a4-page');
+          const visualFailures = [];
+          const articleCards = [...document.querySelectorAll('.article-card')];
+          const issueIndex = document.querySelectorAll('.page-cover .cover-contents-list li');
+          if (articleCards.length !== issueIndex.length) {
+            visualFailures.push('Cover index and article count differ: ' +
+              issueIndex.length + ' vs ' + articleCards.length);
+          }
+          const cover = document.querySelector('.page-cover');
+          const coverIndex = cover?.querySelector('.cover-contents');
+          const skyline = cover?.querySelector('.cover-silhouette-wrap');
+          if (coverIndex && skyline &&
+              coverIndex.getBoundingClientRect().bottom > skyline.getBoundingClientRect().top - 2) {
+            visualFailures.push('Cover contents overlap the Galata skyline');
+          }
+          const photoImages = [...document.querySelectorAll('.article-card img.bento-img')];
+          for (const image of photoImages) {
+            if (getComputedStyle(image).objectFit !== 'contain') {
+              visualFailures.push('Article photo uses a cropping object-fit');
+              break;
+            }
+          }
+          const bookCovers = [...document.querySelectorAll('.book-cover-img')];
+          if (bookCovers.some(img => getComputedStyle(img).objectFit !== 'contain')) {
+            visualFailures.push('Book cover could be cropped');
+          }
+          for (const container of document.querySelectorAll('.article-card .bento-container')) {
+            const grid = container.firstElementChild;
+            if (grid && grid.querySelector('.bento-img')) {
+              const totalHeight = container.getBoundingClientRect().height;
+              const usedHeight = grid.getBoundingClientRect().height;
+              if (totalHeight > 15 && usedHeight / totalHeight < 0.75) {
+                visualFailures.push('Article gallery leaves most of its page blank');
+                break;
+              }
+            }
+          }
+          const captions = [...document.querySelectorAll('.bento-caption')];
+          if (captions.some(caption =>
+            caption.scrollHeight > caption.clientHeight + 2 ||
+            caption.scrollWidth > caption.clientWidth + 2)) {
+            visualFailures.push('A photo caption is visibly clipped');
+          }
           return {
             pathname: location.pathname,
             ready: document.readyState === 'complete' &&
               (!document.fonts || document.fonts.status === 'loaded') &&
               images.every(img => img.complete),
             broken: images.filter(img => !img.naturalWidth).length,
+            visualFailures,
             overflowPages: [...pages].map((page, index) => {
               const inner = page.querySelector('.page-inner');
               const maxOverflow = Math.max(page.scrollHeight - page.clientHeight,
@@ -128,13 +171,16 @@ async function waitForPrintablePage(session) {
       const state = result.result?.value;
       if (state?.pathname === '/render' && state.ready && state.pages) {
         if (state.broken) throw new Error(state.broken + ' images failed to load in print document');
+        if (state.visualFailures?.length) {
+          throw new Error('Visual layout acceptance failed: ' + state.visualFailures.join('; '));
+        }
         if (state.overflowPages?.length) {
           throw new Error('A4 page overflow detected on pages: ' + state.overflowPages.join(', '));
         }
         return state.pages;
       }
     } catch (err) {
-      if (/images failed to load|A4 page overflow/.test(err.message)) throw err;
+      if (/images failed to load|A4 page overflow|Visual layout acceptance failed/.test(err.message)) throw err;
     }
     await pause(160);
   }

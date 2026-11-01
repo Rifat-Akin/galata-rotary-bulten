@@ -37,12 +37,16 @@ jobs:
           node --check scripts/chrome-cdp-print.mjs
           node --check scripts/export-pdf.mjs
           node --check tests/security-http.mjs
+          node --check tests/visual-layout-contract.mjs
 
       - name: Run complete validation and browser regression suite
         run: npm run test:all
 
       - name: Test negative HTTP and PDF-failure security cases
         run: node --test tests/security-http.mjs
+
+      - name: Verify real editorial layout and source-derived print index
+        run: node --test tests/visual-layout-contract.mjs
 
       - name: Rebuild all four PDF issues from reviewed JSON
         run: node scripts/export-pdf.mjs --all

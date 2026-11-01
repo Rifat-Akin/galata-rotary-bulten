@@ -445,6 +445,70 @@ html, body {
   font-weight: 800;
 }
 
+/* Concise, source-derived issue index turns blank cover space into navigation. */
+.cover-contents {
+  margin: 3mm 0 0;
+  border: 1px solid var(--color-border-subtle);
+  border-top: 2px solid var(--color-rotary-gold);
+  border-radius: 5px;
+  background: #FFFFFF;
+  padding: 3mm 4mm;
+  flex: 0 0 auto;
+}
+
+.cover-contents-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 3mm;
+  font-size: 8.8pt;
+  font-weight: 800;
+  color: var(--color-galata-navy);
+  letter-spacing: 0.5px;
+}
+
+.cover-contents-heading span:last-child {
+  color: var(--color-rotary-blue);
+  font-size: 7pt;
+  white-space: nowrap;
+}
+
+.cover-contents-list {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-flow: row;
+  gap: 1mm 5mm;
+  padding: 0;
+  margin: 2mm 0 0;
+}
+
+.cover-contents-list li {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 2mm;
+  padding: 1mm 0;
+  min-width: 0;
+  border-bottom: 1px dotted #CBD5E1;
+}
+
+.cover-content-title {
+  font-size: 7.8pt;
+  font-weight: 650;
+  line-height: 1.28;
+  color: var(--color-text-main);
+  overflow-wrap: break-word;
+}
+
+.cover-content-page {
+  font-size: 8pt;
+  font-weight: 800;
+  color: var(--color-rotary-blue);
+  min-width: 4mm;
+  text-align: right;
+}
+
 /* Galata Silhouette Footer Vector */
 .cover-silhouette-wrap {
   width: 100%;
@@ -778,26 +842,29 @@ html, body {
 }
 
 .article-title {
-  font-size: 12pt;
+  font-size: 15pt;
   font-weight: 800;
   color: var(--color-galata-navy);
-  line-height: 1.25;
-  margin-bottom: 2.5mm;
+  line-height: 1.26;
+  margin-bottom: 3mm;
 }
 
 .article-summary {
-  font-size: 8.5pt;
-  line-height: 1.48;
+  font-size: 9.4pt;
+  line-height: 1.5;
   color: var(--color-text-main);
-  text-align: justify;
-  margin-bottom: 3.5mm;
+  text-align: left;
+  margin-bottom: 3mm;
+  overflow-wrap: break-word;
 }
 
 /* Bento Grid System */
 .bento-container {
-  flex: 1;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
   min-height: 0;
-  margin-top: auto;
+  margin-top: 3mm;
 }
 
 /* Layout 1: single-col */
@@ -805,7 +872,9 @@ html, body {
   display: flex;
   flex-direction: column;
   width: 100%;
-  height: 85mm;
+  height: 100%;
+  min-height: 0;
+  flex: 1 1 0;
 }
 
 .single-col .bento-photo-card {
@@ -816,20 +885,25 @@ html, body {
 /* Layout 2: two-col */
 .two-col {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: minmax(0, 1fr);
   gap: 3mm;
   width: 100%;
-  height: 80mm;
+  height: 100%;
+  min-height: 0;
+  flex: 1 1 0;
 }
 
 /* Layout 3: bento-3 (1 featured + 2 stacked) */
 .bento-3 {
   display: grid;
-  grid-template-columns: 1.2fr 1fr;
-  grid-template-rows: 1fr 1fr;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  grid-template-rows: repeat(2, minmax(0, 1fr));
   gap: 3mm;
   width: 100%;
-  height: 85mm;
+  height: 100%;
+  min-height: 0;
+  flex: 1 1 0;
 }
 
 .bento-3 .bento-photo-card:first-child {
@@ -839,11 +913,13 @@ html, body {
 /* Layout 4: bento-4 (2x2 grid) */
 .bento-4 {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
   gap: 3mm;
   width: 100%;
-  height: 85mm;
+  height: 100%;
+  min-height: 0;
+  flex: 1 1 0;
 }
 
 /* Photo Card & Caption */
@@ -851,35 +927,41 @@ html, body {
   position: relative;
   border-radius: 4px;
   overflow: hidden;
-  background: #E2E8F0;
+  background: #EAF0F6;
   border: 1px solid var(--color-border-subtle);
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
 }
 
 .bento-img {
   width: 100%;
-  height: 100%;
-  object-fit: cover;
+  height: 0;
+  min-width: 0;
+  min-height: 0;
+  object-fit: contain;
+  object-position: center;
   display: block;
-  flex: 1;
+  flex: 1 1 0;
+  background: #EAF0F6;
 }
 
 .bento-caption {
-  background: rgba(11, 37, 69, 0.88);
-  color: #FFFFFF;
-  font-size: 6.2pt;
+  position: static;
+  flex: 0 0 auto;
+  background: #F8FAFC;
+  color: #223957;
+  font-size: 7.2pt;
   font-weight: 600;
-  padding: 1.2mm 2.5mm;
-  line-height: 1.25;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  backdrop-filter: blur(2px);
+  padding: 1.6mm 2.5mm;
+  line-height: 1.35;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+  border-top: 1px solid #DAE2EB;
 }
 
 /* -------------------------------------------------------------
@@ -898,17 +980,19 @@ html, body {
   border: 1px solid var(--color-border-subtle);
   border-top: 3px solid var(--color-rotary-gold);
   border-radius: 6px;
-  padding: 5mm;
+  padding: 6mm;
   display: grid;
-  grid-template-columns: 32mm 1fr;
-  gap: 5mm;
+  grid-template-columns: 52mm minmax(0, 1fr);
+  align-items: start;
+  gap: 7mm;
   box-shadow: 0 2px 8px rgba(11, 37, 69, 0.05);
 }
 
 .book-cover-img {
-  width: 32mm;
-  height: 46mm;
-  object-fit: cover;
+  width: 52mm;
+  height: 70mm;
+  object-fit: contain;
+  background: #F1F5F9;
   border-radius: 4px;
   border: 1.5px solid var(--color-galata-navy);
   box-shadow: 0 3px 8px rgba(0,0,0,0.18);
@@ -928,44 +1012,47 @@ html, body {
 }
 
 .book-title {
-  font-size: 11pt;
+  font-size: 14pt;
   font-weight: 800;
   color: var(--color-galata-navy);
   margin: 1mm 0;
 }
 
 .book-author {
-  font-size: 8pt;
+  font-size: 9.5pt;
   font-weight: 700;
   color: var(--color-rotary-gold);
   margin-bottom: 2mm;
 }
 
 .book-summary {
-  font-size: 7.8pt;
-  line-height: 1.45;
+  font-size: 9.2pt;
+  line-height: 1.52;
   color: var(--color-text-main);
-  text-align: justify;
+  text-align: left;
 }
 
 .announcements-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 3.5mm;
-  flex: 1;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4.5mm;
+  flex: 1 1 0;
+  min-height: 0;
 }
 
 .announcement-box {
-  background: #FFFFFF;
+  background: #F8FAFC;
   border: 1px solid var(--color-border-subtle);
+  border-top: 2px solid var(--color-rotary-blue);
   border-radius: 5px;
-  padding: 3.5mm;
+  padding: 5.5mm;
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 
 .announcement-box-title {
-  font-size: 8pt;
+  font-size: 9.4pt;
   font-weight: 800;
   color: var(--color-galata-navy);
   text-transform: uppercase;
@@ -975,9 +1062,22 @@ html, body {
 }
 
 .announcement-box-content {
-  font-size: 7.3pt;
-  line-height: 1.4;
+  font-size: 8.8pt;
+  line-height: 1.52;
   color: var(--color-text-main);
+}
+
+.announcement-box-content p + p { margin-top: 3mm; }
+.announcement-box::after {
+  content: "GALATA ROTARY • 2026–2027";
+  display: block;
+  margin-top: auto;
+  padding-top: 3mm;
+  color: #64748B;
+  font-size: 6.7pt;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  border-top: 1px solid #CBD5E1;
 }
 
 /* -------------------------------------------------------------

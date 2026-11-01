@@ -693,6 +693,40 @@ async function runEmpiricalChallengeSuite() {
       assert('Mobile (<640px): Bento switcher buttons wrap (flex-wrap: wrap)', mobileResult?.bentoWrap === 'wrap', mobileResult?.bentoWrap);
       assert('Mobile (<640px): header action button labels hidden (emoji-only mode)', mobileResult?.btnSaveSpanDisplay === 'none', mobileResult?.btnSaveSpanDisplay);
 
+      // Regression: the 320px/375px phone header previously overflowed to 537px.
+      // Verify actual computed browser boxes rather than a CSS source substring.
+      for (const phoneWidth of [320, 375]) {
+        await session.send('Emulation.setDeviceMetricsOverride', {
+          width: phoneWidth,
+          height: 800,
+          deviceScaleFactor: 2,
+          mobile: true
+        });
+        const phone = await session.eval(`(() => {
+          const header = document.querySelector('.studio-header');
+          const center = document.querySelector('.studio-header-center');
+          const badges = [...center.querySelectorAll('.page-count-badge, .overflow-status-badge, .runtime-mode-badge')];
+          return {
+            width: window.innerWidth,
+            fullWidth: document.documentElement.scrollWidth,
+            headerScroll: header.scrollWidth,
+            headerClient: header.clientWidth,
+            headerBounds: header.getBoundingClientRect().right,
+            centerWrap: getComputedStyle(center).flexWrap,
+            maxBadgeRight: Math.max(...badges.map(x => x.getBoundingClientRect().right))
+          };
+        })()`);
+        assert('Mobile ' + phoneWidth + 'px: no whole-document horizontal overflow',
+          phone?.fullWidth <= phoneWidth + 1,
+          JSON.stringify(phone));
+        assert('Mobile ' + phoneWidth + 'px: header controls fully within viewport',
+          phone?.headerScroll <= phone?.headerClient + 1 &&
+          phone?.headerBounds <= phoneWidth + 1 &&
+          phone?.maxBadgeRight <= phoneWidth + 1 &&
+          phone?.centerWrap === 'wrap',
+          JSON.stringify(phone));
+      }
+
       // Restore desktop viewport
       await session.send('Emulation.setDeviceMetricsOverride', {
         width: 1280,
