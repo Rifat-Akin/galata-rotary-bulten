@@ -691,7 +691,7 @@ async function runEmpiricalChallengeSuite() {
       assert('Mobile (<640px): form inputs use 16px font-size (prevents iOS Safari auto-zoom)', mobileResult?.fontSize === '16px', mobileResult?.fontSize);
       assert('Mobile (<640px): corporate app badge hidden to conserve header space', mobileResult?.badgeDisplay === 'none', mobileResult?.badgeDisplay);
       assert('Mobile (<640px): Bento switcher buttons wrap (flex-wrap: wrap)', mobileResult?.bentoWrap === 'wrap', mobileResult?.bentoWrap);
-      assert('Mobile (<640px): header action button labels hidden (emoji-only mode)', mobileResult?.btnSaveSpanDisplay === 'none', mobileResult?.btnSaveSpanDisplay);
+      assert('Mobile (<640px): toolbar labels are visible, not emoji-only', mobileResult?.btnSaveSpanDisplay !== 'none', mobileResult?.btnSaveSpanDisplay);
 
       // Regression: the 320px/375px phone header previously overflowed to 537px.
       // Verify actual computed browser boxes rather than a CSS source substring.
@@ -727,6 +727,57 @@ async function runEmpiricalChallengeSuite() {
           JSON.stringify(phone));
       }
 
+      // Real interactive affordance audit, after the 375px viewport probe.
+      const realUi = await session.eval(`(() => {
+        const bar = document.querySelector('.studio-header-actions');
+        const visible = [...bar.querySelectorAll('button')]
+          .filter(x => getComputedStyle(x).display !== 'none')
+          .map(x => ({id: x.id, h: x.getBoundingClientRect().height,
+            w: x.getBoundingClientRect().width, name: x.innerText.trim()}));
+        const tabs = document.querySelector('.editor-tabs-bar');
+        const tabsAllVisible = [...tabs.querySelectorAll('.tab-btn')].every(x =>
+          x.getBoundingClientRect().right <= tabs.getBoundingClientRect().right + 1);
+        const namesValid = [...document.querySelectorAll('input, textarea, select')]
+          .filter(x => x.getClientRects().length)
+          .every(x => x.labels?.length || x.getAttribute('aria-label'));
+        const more = document.getElementById('btn-more-actions');
+        more.click();
+        const expanded = more.getAttribute('aria-expanded') === 'true' &&
+          getComputedStyle(document.getElementById('btn-download-json')).display !== 'none';
+        more.click();
+        const collapsed = more.getAttribute('aria-expanded') === 'false';
+        return {visible, tabsAllVisible, namesValid, expanded, collapsed};
+      })()`);
+      assert('Mobile UI: three named 44px quick actions, no unreadable icon-only toolbar',
+        realUi?.visible?.length === 3 &&
+        ['btn-save', 'btn-export-pdf', 'btn-more-actions'].every(id =>
+          realUi.visible.some(x => x.id === id && x.h >= 44 &&
+            x.w >= 70 && x.name.length >= 4)), JSON.stringify(realUi));
+      assert('Mobile UI: all five editor sections are visibly discoverable',
+        realUi?.tabsAllVisible === true);
+      assert('Mobile UI: fields have programmatically associated labels',
+        realUi?.namesValid === true);
+      assert('Mobile UI: secondary actions disclose, then safely collapse',
+        realUi?.expanded === true && realUi?.collapsed === true);
+      const zoomPan = await session.eval(`(() => {
+        document.getElementById('btn-mode-reader').click();
+        const zoom = document.querySelector('.zoom-chip[data-zoom="1.0"]');
+        const offered = getComputedStyle(zoom).display !== 'none';
+        zoom.click();
+        const v = document.getElementById('preview-viewport');
+        v.style.scrollBehavior = 'auto';
+        const start = document.querySelector('.a4-page').getBoundingClientRect().x;
+        v.scrollLeft = 9999;
+        const r = {offered, start, max: v.scrollWidth - v.clientWidth,
+          end: v.scrollLeft};
+        document.getElementById('btn-zoom-fit').click();
+        document.getElementById('btn-mode-editor').click();
+        return r;
+      })()`);
+      assert('Mobile reader: 100% zoom button and full-page horizontal panning work',
+        zoomPan?.offered === true && zoomPan.start >= -1 &&
+        zoomPan.max >= 200 && zoomPan.end >= 200, JSON.stringify(zoomPan));
+
       // Restore desktop viewport
       await session.send('Emulation.setDeviceMetricsOverride', {
         width: 1280,
@@ -735,6 +786,34 @@ async function runEmpiricalChallengeSuite() {
         mobile: false
       });
 
+      // Audit the desktop sidebar, dialog semantics and focus restoration.
+      const desktopUi = await session.eval(`(() => {
+        const tabs = document.querySelector('.editor-tabs-bar');
+        const allTabs = [...tabs.querySelectorAll('.tab-btn')];
+        const visible = allTabs.length === 5 && allTabs.every(x =>
+          x.getBoundingClientRect().right <= tabs.getBoundingClientRect().right + 1);
+        const trigger = document.getElementById('btn-new-issue');
+        // Emulate a real focused keyboard/pointer activation, not bare DOM click().
+        trigger.focus();
+        trigger.click();
+        const modal = document.getElementById('modal-new-issue');
+        const opened = {focus: document.activeElement.id,
+          aria: modal.getAttribute('aria-hidden'),
+          dialog: modal.querySelector('[role="dialog"]')?.getAttribute('aria-modal')};
+        document.dispatchEvent(new KeyboardEvent('keydown',
+          {key:'Escape', bubbles:true, cancelable:true}));
+        return {visible, opened, closed: modal.getAttribute('aria-hidden'),
+          returnedFocus: document.activeElement.id};
+      })()`);
+      assert('Desktop UI: all five section tabs visible without hidden scroll',
+        desktopUi?.visible === true);
+      assert('New-issue modal: keyboard focus and Escape lifecycle are accessible',
+        desktopUi?.opened?.focus === 'new-issue-month' &&
+        desktopUi?.opened?.aria === 'false' &&
+        desktopUi?.opened?.dialog === 'true' &&
+        desktopUi?.closed === 'true' &&
+        desktopUi?.returnedFocus === 'btn-new-issue',
+        JSON.stringify(desktopUi));
       // ----------------------------------------------------------------------
       // SUB-TEST 2D: Non-Destructive Article Management
       // ----------------------------------------------------------------------

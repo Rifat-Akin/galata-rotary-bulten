@@ -1527,3 +1527,126 @@ body.mode-reader-active .a4-page {
     gap: 5px;
   }
 }
+/* 2026-11-02 interaction audit: real visibility and touch affordance.
+   PDF printing uses its separate bulletin-print.css and is unaffected. */
+@media screen and (min-width: 901px) {
+  .editor-tabs-bar {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    overflow: visible;
+  }
+  .editor-tabs-bar .tab-btn {
+    min-width: 0;
+    width: 100%;
+    min-height: 44px;
+    white-space: normal;
+    text-align: center;
+    justify-content: center;
+    line-height: 1.2;
+    padding: 7px 2px;
+    font-size: 11px;
+  }
+}
+@media screen and (max-width: 640px) {
+  .studio-header-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    width: 100%;
+    align-items: stretch;
+  }
+  .studio-header-actions .btn {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    padding: 6px 4px;
+    font-size: 12px;
+    line-height: 1.15;
+    white-space: normal;
+    text-align: center;
+    justify-content: center;
+  }
+  .studio-header-actions .btn span:first-child { display: none; }
+  .studio-header-actions .btn span:not(:first-child) { display: inline; }
+  .studio-header-actions #btn-rotaclub-sync {
+    grid-column: 1 / -1;
+    min-height: 28px;
+    font-size: 11px;
+    padding: 4px;
+  }
+  .editor-tabs-bar {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    overflow: visible;
+    padding: 0;
+  }
+  .editor-tabs-bar .tab-btn {
+    min-width: 0;
+    width: 100%;
+    min-height: 46px;
+    white-space: normal;
+    overflow-wrap: break-word;
+    text-align: center;
+    justify-content: center;
+    padding: 7px 2px;
+    font-size: 11px;
+    line-height: 1.2;
+  }
+  .zoom-btn-group .zoom-chip[data-zoom="1.0"],
+  .zoom-btn-group .zoom-chip[data-zoom="1.25"] {
+    display: inline-flex !important; /* override old tablet hide selector */
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    padding: 5px 8px;
+  }
+  .zoom-btn-group .zoom-chip[data-zoom="0.5"],
+  .zoom-btn-group .zoom-chip[data-zoom="0.75"] { display: none !important; }
+  .zoom-btn-group #btn-zoom-fit { min-height: 40px; }
+  .reader-nav-btn { min-height: 40px; min-width: 40px; justify-content: center; }
+}
+.studio-header-actions .btn:focus-visible,
+.editor-tabs-bar .tab-btn:focus-visible,
+.zoom-chip:focus-visible,
+.mode-switch-btn:focus-visible,
+.modal-close-btn:focus-visible,
+.reader-nav-btn:focus-visible,
+.form-input:focus-visible,
+.form-textarea:focus-visible,
+.form-select:focus-visible {
+  outline: 3px solid #F7A81B;
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .preview-stage, .zoom-chip, .tab-btn { transition: none; }
+}
+/* Mobile compact action drawer: keep the most-used controls visible while
+   preserving a labeled, keyboard-accessible path to secondary actions. */
+@media screen and (min-width: 641px) {
+  .studio-header-actions #btn-more-actions { display: none; }
+}
+@media screen and (max-width: 640px) {
+  .studio-header-actions #btn-save { order: 0; }
+  .studio-header-actions #btn-export-pdf { order: 1; }
+  .studio-header-actions #btn-more-actions {
+    display: flex;
+    order: 2;
+  }
+  .studio-header-actions .mobile-secondary-action {
+    display: none;
+    order: 3;
+  }
+  .studio-header-actions.expanded .mobile-secondary-action { display: flex; }
+  .studio-header-actions.expanded #btn-rotaclub-sync {
+    grid-column: 1 / -1;
+    min-height: 28px;
+  }
+}
+/* Touch-oriented tablet controls, while retaining the fixed desktop header. */
+@media screen and (min-width: 641px) and (max-width: 900px) {
+  .studio-header-actions .btn { min-height: 44px; }
+}
+@media screen and (min-width: 901px) {
+  .studio-header-actions .btn { min-height: 36px; }
+}

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Galata Rotary Bülten Stüdyosu — 2026-2027</title>
   <link rel="stylesheet" href="styles/bulletin-print.css?v=20261101-editorial6">
-  <link rel="stylesheet" href="styles/studio.css?v=20261101-editorial6">
+  <link rel="stylesheet" href="styles/studio.css?v=20261102-ui8">
   <link rel="icon" type="image/svg+xml" href="assets/brand/rotary-logo.svg">
 </head>
 <body>
@@ -56,33 +56,38 @@
       </button>
     </div>
 
-    <div class="studio-header-actions">
-      <button id="btn-save" class="btn btn-primary" title="Değişiklikleri Kaydet (Ctrl+S)">
+    <div class="studio-header-actions" id="studio-header-actions">
+      <button id="btn-save" aria-label="Değişiklikleri kaydet" class="btn btn-primary" title="Değişiklikleri Kaydet (Ctrl+S)">
         <span>💾</span> <span>Kaydet</span>
       </button>
 
-      <button id="btn-download-json" class="btn btn-secondary" title="Güncel Bülten Verisini JSON Olarak İndir">
+      <button id="btn-download-json" aria-label="Bülten JSON dosyasını indir" class="btn btn-secondary mobile-secondary-action" title="Güncel Bülten Verisini JSON Olarak İndir">
         <span>📥</span> <span>JSON İndir</span>
       </button>
 
-      <button id="btn-reset-issue" class="btn btn-secondary" title="Yerel Değişiklikleri Sıfırla ve Orijinal Bülteni Yükle">
+      <button id="btn-reset-issue" aria-label="Yerel değişiklikleri sıfırla" class="btn btn-secondary mobile-secondary-action" title="Yerel Değişiklikleri Sıfırla ve Orijinal Bülteni Yükle">
         <span>↺</span> <span>Sıfırla</span>
       </button>
 
-      <button id="btn-export-pdf" class="btn btn-accent" title="Baskı Kalitesinde A4 PDF İndir">
+      <button id="btn-export-pdf" aria-label="Bülteni PDF olarak indir" class="btn btn-accent" title="Baskı Kalitesinde A4 PDF İndir">
         <span>📄</span> <span>PDF İndir</span>
       </button>
 
-      <button id="btn-print" class="btn btn-secondary" title="Tarayıcı Yazdırma İletişim Kutusunu Aç (Ctrl+P)">
+      <button id="btn-print" aria-label="Bülteni yazdır" class="btn btn-secondary mobile-secondary-action" title="Tarayıcı Yazdırma İletişim Kutusunu Aç (Ctrl+P)">
         <span>🖨️</span> <span>Yazdır</span>
       </button>
 
-      <button id="btn-new-issue" class="btn btn-secondary" title="Yeni Bir Ay İçin Bülten Şablonu Başlat">
+      <button id="btn-new-issue" aria-label="Yeni ay bülteni başlat" class="btn btn-secondary mobile-secondary-action" title="Yeni Bir Ay İçin Bülten Şablonu Başlat">
         <span>✨</span> <span>Yeni Ay Başlat</span>
       </button>
 
-      <button id="btn-rotaclub-sync" class="btn btn-secondary" title="RotaClub Portalı ile Senkronize Et">
+      <button id="btn-rotaclub-sync" aria-label="RotaClub senkronizasyonu kullanılabilir değil" class="btn btn-secondary mobile-secondary-action" title="RotaClub Portalı ile Senkronize Et">
         <span>🔄</span> <span>RotaClub Senkronize Et</span>
+      </button>
+      <button id="btn-more-actions" class="btn btn-secondary" type="button"
+              aria-controls="studio-header-actions" aria-expanded="false"
+              aria-label="Diğer bülten işlemlerini göster">
+        <span>⋯</span> <span>Diğerleri</span>
       </button>
     </div>
   </header>
@@ -93,7 +98,7 @@
     <!-- Left Pane: Editor Sidebar & Form Controls -->
     <aside id="editor-pane" class="editor-pane no-print">
       <!-- Section Tabs -->
-      <nav class="editor-tabs-bar">
+      <nav class="editor-tabs-bar" aria-label="Bülten Bölümleri">
         <button class="tab-btn active" data-tab="tab-cover">Kapak & Künye</button>
         <button class="tab-btn" data-tab="tab-president">Başkan Mesajı</button>
         <button class="tab-btn" data-tab="tab-articles">Haberler & Projeler</button>
@@ -116,26 +121,26 @@
 
           <div class="form-row">
             <div class="form-group">
-              <label class="form-label">Sayı Numarası</label>
+              <label class="form-label" for="inp-issue-number">Sayı Numarası</label>
               <input type="number" id="inp-issue-number" class="form-input" min="1" max="20">
             </div>
             <div class="form-group">
-              <label class="form-label">Ay</label>
+              <label class="form-label" for="inp-month">Ay</label>
               <input type="text" id="inp-month" class="form-input" placeholder="Eylül">
             </div>
             <div class="form-group">
-              <label class="form-label">Yıl</label>
+              <label class="form-label" for="inp-year">Yıl</label>
               <input type="number" id="inp-year" class="form-input" value="2026">
             </div>
           </div>
 
           <div class="form-group">
-            <label class="form-label">Rotary Tanımlanmış Ay Teması</label>
+            <label class="form-label" for="inp-rotary-month-theme">Rotary Tanımlanmış Ay Teması</label>
             <input type="text" id="inp-rotary-month-theme" class="form-input" placeholder="Temel Eğitim ve Okuryazarlık Ayı">
           </div>
 
           <div class="form-group">
-            <label class="form-label">Haftalık Toplantı Bilgisi</label>
+            <label class="form-label" for="inp-club-meeting">Haftalık Toplantı Bilgisi</label>
             <input type="text" id="inp-club-meeting" class="form-input" placeholder="Her Pazartesi 19:30 | Grand Hyatt İstanbul Taksim & Zoom">
           </div>
 
@@ -144,38 +149,38 @@
           <h3 style="font-size:13px; font-weight:700; color:#0B2545; margin-bottom:12px;">Kulüp ve Bölge Yöneticileri</h3>
 
           <div class="form-group">
-            <label class="form-label">Uluslararası Rotary Başkanı</label>
+            <label class="form-label" for="inp-ri-president">Uluslararası Rotary Başkanı</label>
             <input type="text" id="inp-ri-president" class="form-input" value="Olayinka Hakeem Babalola">
           </div>
 
           <div class="form-group">
-            <label class="form-label">2420. Bölge Guvernörü</label>
+            <label class="form-label" for="inp-district-governor">2420. Bölge Guvernörü</label>
             <input type="text" id="inp-district-governor" class="form-input" value="Erden Gökmen">
           </div>
 
           <div class="form-group">
-            <label class="form-label">18. Grup Guvernör Yardımcısı</label>
+            <label class="form-label" for="inp-assistant-governor">18. Grup Guvernör Yardımcısı</label>
             <input type="text" id="inp-assistant-governor" class="form-input" value="İhsan Ercan">
           </div>
 
           <div class="form-group">
-            <label class="form-label">Dönem Başkanı</label>
+            <label class="form-label" for="inp-president">Dönem Başkanı</label>
             <input type="text" id="inp-president" class="form-input" value="Sevilay Aksel">
           </div>
 
           <div class="form-row">
             <div class="form-group">
-              <label class="form-label">Dönem Sekreteri</label>
+              <label class="form-label" for="inp-secretary">Dönem Sekreteri</label>
               <input type="text" id="inp-secretary" class="form-input" value="Gökhan Alpertunga">
             </div>
             <div class="form-group">
-              <label class="form-label">Dönem Saymanı</label>
+              <label class="form-label" for="inp-treasurer">Dönem Saymanı</label>
               <input type="text" id="inp-treasurer" class="form-input" value="Burhan Tokgöz">
             </div>
           </div>
 
           <div class="form-group">
-            <label class="form-label">Bülten Komitesi (Virgülle ayırın)</label>
+            <label class="form-label" for="inp-bulletin-committee">Bülten Komitesi (Virgülle ayırın)</label>
             <input type="text" id="inp-bulletin-committee" class="form-input" placeholder="Rifat Akın Kaplan, Özgür Kuddar, GDB Polat Özcan">
           </div>
         </section>
@@ -188,14 +193,14 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label">Mesaj Başlığı</label>
+            <label class="form-label" for="inp-president-title">Mesaj Başlığı</label>
             <input type="text" id="inp-president-title" class="form-input" placeholder="Eğitimle Büyüyen Umut, Barışla Güçlenen Gelecek">
           </div>
 
           <div class="form-group">
-            <label class="form-label">Başkan Portre Fotoğrafı</label>
+            <label class="form-label" for="inp-president-body">Başkan Portre Fotoğrafı</label>
             <div style="display:flex; gap:8px;">
-              <input type="text" id="inp-president-photo" class="form-input" placeholder="assets/photos/2026-09/baskan_sevilay_aksel.jpg">
+              <input type="text" id="inp-president-photo" class="form-input" placeholder="assets/photos/2026-09/baskan_sevilay_aksel.jpg" aria-label="Başkan fotoğrafı dosya yolu">
               <label class="file-upload-label" style="margin-top:0;">
                 <span>Yükle</span>
                 <input type="file" class="hidden-file-input" data-target="inp-president-photo" accept="image/*">
@@ -234,24 +239,24 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label">Bölüm Başlığı</label>
+            <label class="form-label" for="inp-culture-title">Bölüm Başlığı</label>
             <input type="text" id="inp-culture-title" class="form-input" value="Galata Kültür Köşesi">
           </div>
 
           <div class="form-group">
-            <label class="form-label">Kitap Adı</label>
+            <label class="form-label" for="inp-book-title">Kitap Adı</label>
             <input type="text" id="inp-book-title" class="form-input" placeholder="Beyoğlu: Eski Yeni (Then & Now)">
           </div>
 
           <div class="form-group">
-            <label class="form-label">Yazar</label>
+            <label class="form-label" for="inp-book-author">Yazar</label>
             <input type="text" id="inp-book-author" class="form-input" placeholder="Timurtaş Onan">
           </div>
 
           <div class="form-group">
-            <label class="form-label">Kitap Kapak Görseli</label>
+            <label class="form-label" for="inp-book-summary">Kitap Kapak Görseli</label>
             <div style="display:flex; gap:8px;">
-              <input type="text" id="inp-book-cover" class="form-input" placeholder="assets/photos/2026-09/kitap_beyoglu_eski_yeni.jpg">
+              <input type="text" id="inp-book-cover" class="form-input" placeholder="assets/photos/2026-09/kitap_beyoglu_eski_yeni.jpg" aria-label="Kitap kapağı dosya yolu">
               <label class="file-upload-label" style="margin-top:0;">
                 <span>Yükle</span>
                 <input type="file" class="hidden-file-input" data-target="inp-book-cover" accept="image/*">
@@ -273,27 +278,27 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label">Kapanış Teması (Zorunlu)</label>
+            <label class="form-label" for="inp-backcover-theme">Kapanış Teması (Zorunlu)</label>
             <input type="text" id="inp-backcover-theme" class="form-input" value="ÇOCUK FELCİNE SON" readonly style="background:#F1F5F9; font-weight:700;">
           </div>
 
           <div class="form-group">
-            <label class="form-label">Uluslararası İsim</label>
+            <label class="form-label" for="inp-backcover-subtheme">Uluslararası İsim</label>
             <input type="text" id="inp-backcover-subtheme" class="form-input" value="End Polio Now" readonly style="background:#F1F5F9;">
           </div>
 
           <div class="form-group">
-            <label class="form-label">Arka Plan Rengi</label>
+            <label class="form-label" for="inp-backcover-color">Arka Plan Rengi</label>
             <input type="text" id="inp-backcover-color" class="form-input" value="#E01E26" readonly style="background:#FEE2E2; color:#B91C1C; font-weight:700;">
           </div>
 
           <div class="form-row">
             <div class="form-group">
-              <label class="form-label">Instagram</label>
+              <label class="form-label" for="inp-contact-instagram">Instagram</label>
               <input type="text" id="inp-contact-instagram" class="form-input" value="@galatarotarykulubu">
             </div>
             <div class="form-group">
-              <label class="form-label">Web Sitesi</label>
+              <label class="form-label" for="inp-contact-web">Web Sitesi</label>
               <input type="text" id="inp-contact-web" class="form-input" value="www.galatarotary.org">
             </div>
           </div>
@@ -316,7 +321,7 @@
             <button class="zoom-chip" data-zoom="1.25">125%</button>
           </div>
           <div class="zoom-slider-container">
-            <input type="range" id="zoom-slider" class="zoom-slider" min="30" max="150" value="75">
+            <input type="range" id="zoom-slider" aria-label="Önizleme yakınlaştırma yüzdesi" class="zoom-slider" min="30" max="150" value="75">
             <span id="zoom-val" class="zoom-percent-text">75%</span>
           </div>
         </div>
@@ -384,11 +389,11 @@
   </div>
 
   <!-- New Month Initializer Modal Dialog -->
-  <div id="modal-new-issue" class="modal-overlay">
-    <div class="modal-card">
+  <div id="modal-new-issue" class="modal-overlay" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="new-issue-dialog-title">
       <div class="modal-header">
-        <h3 class="modal-title">✨ Yeni Ay İçin Bülten Başlat</h3>
-        <button id="btn-close-modal" class="modal-close-btn">&times;</button>
+        <h3 class="modal-title" id="new-issue-dialog-title">✨ Yeni Ay İçin Bülten Başlat</h3>
+        <button id="btn-close-modal" class="modal-close-btn" aria-label="Yeni ay penceresini kapat">&times;</button>
       </div>
       <div class="modal-body">
         <p style="font-size:13px; color:#475569; margin-bottom:16px;">
@@ -397,7 +402,7 @@
 
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label">Ay</label>
+            <label class="form-label" for="new-issue-month">Ay</label>
             <select id="new-issue-month" class="form-select">
               <option value="Temmuz">Temmuz</option>
               <option value="Ağustos">Ağustos</option>
@@ -415,18 +420,18 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label">Yıl</label>
+            <label class="form-label" for="new-issue-year">Yıl</label>
             <input type="number" id="new-issue-year" class="form-input" value="2026">
           </div>
 
           <div class="form-group">
-            <label class="form-label">Sayı No</label>
+            <label class="form-label" for="new-issue-num">Sayı No</label>
             <input type="number" id="new-issue-num" class="form-input" value="5">
           </div>
         </div>
 
         <div class="form-group">
-          <label class="form-label">Rotary Tanımlanmış Ay Teması</label>
+          <label class="form-label" for="new-issue-theme">Rotary Tanımlanmış Ay Teması</label>
           <input type="text" id="new-issue-theme" class="form-input" value="Rotary Vakfı Ayı">
         </div>
       </div>
@@ -442,6 +447,6 @@
 
   <!-- Load Renderer & Studio Controller -->
   <script type="module" src="renderer.js?v=20261101-editorial7"></script>
-  <script type="module" src="studio.js?v=20261101-editorial7"></script>
+  <script type="module" src="studio.js?v=20261102-ui8"></script>
 </body>
 </html>
