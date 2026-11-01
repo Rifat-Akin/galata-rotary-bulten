@@ -894,6 +894,63 @@ html, body {
   flex: 1 1 0;
 }
 
+/* Editorial two-photo story. A dominant 2:1 visual hierarchy replaces
+   equal 50/50 panels, especially for the September issue 3 page 3 posters.
+   Actual image aspect ratios and complete captions are always preserved. */
+.editorial-duo {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 0.8fr);
+  align-items: center;
+  align-content: center;
+  gap: 7mm;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  flex: 1 1 0;
+}
+
+.editorial-duo .bento-photo-card {
+  align-self: center;
+  height: auto;
+  min-width: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
+.editorial-duo .bento-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 183mm;
+  flex: 0 0 auto;
+  object-fit: contain;
+  object-position: center;
+  background: transparent;
+}
+
+.editorial-duo .bento-photo-card:not(:first-child) {
+  transform: translateY(12mm);
+}
+
+.editorial-duo .bento-photo-card:not(:first-child) .bento-img {
+  max-height: 103mm;
+}
+
+.editorial-duo .bento-caption {
+  margin-top: 2mm;
+  padding: 2.5mm 0 1.5mm 3mm;
+  background: transparent;
+  border-top: 0;
+  border-left: 2px solid var(--color-rotary-gold);
+  font-size: 7.5pt;
+  font-weight: 700;
+  line-height: 1.42;
+  overflow-wrap: break-word;
+}
+
 /* Layout 3: bento-3 (1 featured + 2 stacked) */
 .bento-3 {
   display: grid;
@@ -910,16 +967,51 @@ html, body {
   grid-row: span 2;
 }
 
-/* Layout 4: bento-4 (2x2 grid) */
+/* Four photos: one wide lead picture above a three-frame filmstrip.
+   The previous four equally weighted tiles looked like a contact sheet. */
 .bento-4 {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-template-rows: repeat(2, minmax(0, 1fr));
-  gap: 3mm;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: minmax(0, 1.55fr) minmax(0, 1fr);
+  gap: 4mm;
   width: 100%;
   height: 100%;
   min-height: 0;
   flex: 1 1 0;
+}
+
+.bento-4 .bento-photo-card {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.bento-4 .bento-img {
+  background: transparent;
+}
+
+.bento-4 .bento-caption {
+  border-top: 0;
+  border-left: 2px solid var(--color-rotary-gold);
+  background: #FFFFFF;
+  padding: 1.6mm 0 1mm 2mm;
+}
+
+.bento-4 .bento-photo-card:first-child {
+  grid-column: 1 / -1;
+  grid-row: 1;
+}
+
+.bento-4 .bento-photo-card:first-child .bento-caption {
+  border-left: 2px solid var(--color-rotary-gold);
+  border-top: 0;
+  padding-left: 3mm;
+  background: #FFFFFF;
+}
+
+.bento-4 .bento-photo-card:not(:first-child) .bento-caption {
+  font-size: 6.7pt;
+  line-height: 1.3;
 }
 
 /* Photo Card & Caption */

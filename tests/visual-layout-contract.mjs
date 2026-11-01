@@ -16,9 +16,14 @@ function htmlEscape(text) {
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 function block(selector) {
-  const index = stylesheet.indexOf(selector + ' {');
-  assert.ok(index !== -1, 'CSS selector missing: ' + selector);
-  return stylesheet.slice(index, stylesheet.indexOf('}', index) + 1);
+  // Match the entire selector line: ".bento-caption" must not accidentally
+  // pick up an earlier ".editorial-duo .bento-caption" override.
+  const lines = stylesheet.split('\n');
+  const start = lines.findIndex(line => line.trim() === selector + ' {');
+  assert.ok(start !== -1, 'CSS selector missing: ' + selector);
+  const endOffset = lines.slice(start).findIndex(line => line.trim() === '}');
+  assert.ok(endOffset !== -1, 'CSS closing brace missing: ' + selector);
+  return lines.slice(start, start + endOffset + 1).join('\n');
 }
 
 for (const issueMeta of catalog) {
@@ -27,7 +32,7 @@ for (const issueMeta of catalog) {
     const html = renderIssueToHTML(issue, {fullDoc: true});
     const pages = html.match(/<article class="a4-page/g) || [];
     assert.equal(pages.length, issueMeta.pageCount, 'must preserve accepted official pagination');
-    assert.equal(html.includes('styles/bulletin-print.css?v=20261101-editorial6'), true,
+    assert.equal(html.includes('styles/bulletin-print.css?v=20261102-photo10'), true,
       'full-document print CSS must be cache-busted');
     assert.match(html, /class="culture-watermark"/,
       'culture pages must use a clear non-stretched decorative ending');
@@ -53,9 +58,68 @@ test('article photos and book covers do not crop source images', () => {
   assert.match(block('.book-cover-img'), /object-fit:\s*contain/);
   assert.doesNotMatch(block('.bento-caption'), /white-space:\s*nowrap/);
   assert.match(block('.bento-caption'), /position:\s*static/);
-  for (const cls of ['.single-col', '.two-col', '.bento-3', '.bento-4']) {
+  for (const cls of ['.single-col', '.editorial-duo', '.bento-3', '.bento-4']) {
     assert.match(block(cls), /height:\s*100%/, cls + ' must fill the allocated page media area');
   }
+});
+
+test('September issue 3 page 3 has an asymmetric editorial photo story', () => {
+  const issue = JSON.parse(fs.readFileSync(
+    path.join(root, 'data/issues/2026-09-eylul.json'), 'utf8'));
+  const html = renderIssueToHTML(issue, {fullDoc: false});
+  const pageThreeStart = html.indexOf('data-page-index="3"');
+  const pageFourStart = html.indexOf('data-page-index="4"');
+  const pageThree = html.slice(pageThreeStart, pageFourStart);
+  assert.ok(pageThreeStart !== -1 && pageFourStart > pageThreeStart);
+  assert.match(pageThree, /class="editorial-duo"/);
+  assert.doesNotMatch(pageThree, /class="two-col"/);
+  assert.equal((pageThree.match(/class="bento-img"/g) || []).length, 2);
+  assert.ok(pageThree.includes('00005281.jpg'));
+  assert.ok(pageThree.includes('00005340.jpg'));
+  assert.match(block('.editorial-duo'), /grid-template-columns:\s*minmax\(0, 1\.6fr\) minmax\(0, 0\.8fr\)/);
+  assert.match(block('.editorial-duo .bento-photo-card'), /background:\s*transparent/);
+  assert.match(block('.editorial-duo .bento-img'), /object-fit:\s*contain/);
+  assert.match(block('.editorial-duo .bento-caption'), /overflow-wrap:\s*break-word/);
+});
+
+test('studio photo layout selector matches the actual preview and updates as photos change', () => {
+  const controller = fs.readFileSync(path.join(root, 'public/studio.js'), 'utf8');
+  assert.match(controller, /data-layout="editorial-duo"/,
+    'two-photo selector must invoke the actual editorial-duo renderer');
+  assert.doesNotMatch(controller, /İki Eşit Fotoğraf Kolonu/,
+    'the editor must not advertise the rejected 50\/50 split');
+  assert.match(controller, /Ana \+ Destek/,
+    'describe the visual hierarchy rather than a technical column count');
+  assert.match(controller, /function defaultPhotoLayout\(count\)/,
+    'photo add/delete must update the chosen gallery layout');
+  assert.match(controller, /setArticleLayoutControls\(card, currentIssue\.articles\[artIdx\]\.layout\)/);
+});
+
+test('legacy one-photo overrides no longer create an empty second column', () => {
+  const july = JSON.parse(fs.readFileSync(
+    path.join(root, 'data/issues/2026-07-temmuz.json'), 'utf8'));
+  const html = renderIssueToHTML(july);
+  const cards = html.split('<section class="article-card ');
+  // July article 1 is stored with legacy layout=two-col but owns one photo.
+  assert.match(cards[1], /class="single-col"/);
+  assert.doesNotMatch(cards[1], /class="two-col"/);
+});
+
+test('four-photo spreads prioritize documentary photography without changing originals', () => {
+  const issue = JSON.parse(fs.readFileSync(
+    path.join(root, 'data/issues/2026-09-eylul.json'), 'utf8'));
+  const photoUrls = issue.articles[1].photos.map(p => p.url);
+  const html = renderIssueToHTML(issue);
+  const pageFour = html.slice(html.indexOf('data-page-index="4"'), html.indexOf('data-page-index="5"'));
+  assert.match(pageFour, /class="bento-4"/);
+  const imageMatches = [...pageFour.matchAll(/<img src="([^"]+)"[^>]*class="bento-img"/g)]
+    .map(m => m[1]);
+  assert.deepEqual(new Set(imageMatches), new Set(photoUrls));
+  assert.equal(imageMatches.length, 4);
+  assert.ok(imageMatches[0].endsWith('00005290.jpg'),
+    'the actual meeting photo should lead, not a mobile screenshot');
+  assert.match(block('.bento-4'), /grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/);
+  assert.match(block('.bento-4 .bento-photo-card:first-child'), /grid-column:\s*1 \/ -1/);
 });
 
 test('typography, culture features and cache version are designed for readable A4', () => {
@@ -65,16 +129,16 @@ test('typography, culture features and cache version are designed for readable A
   assert.match(block('.announcement-box-content'), /font-size:\s*8\.8pt/);
   assert.match(block('.culture-page-grid .announcements-grid'), /flex:\s*0 0 auto/);
   assert.match(block('.culture-watermark img'), /object-fit:\s*contain/);
-  assert.match(studio, /styles\/bulletin-print\.css\?v=20261101-editorial6/);
+  assert.match(studio, /styles\/bulletin-print\.css\?v=20261102-photo10/);
   assert.match(studio, /styles\/studio\.css\?v=20261102-ui9/);
 });
 
 test('Pages uses cache-versioned modules and officially downloaded PDFs', () => {
   const controller = fs.readFileSync(path.join(root, 'public/studio.js'), 'utf8');
-  const tag = '20261101-editorial7';
+  const tag = '20261102-photo10';
   assert.ok(studio.includes('src="renderer.js?v=' + tag + '"'),
     'renderer module must bypass cached pre-release JavaScript');
-  assert.ok(studio.includes('src="studio.js?v=20261102-ui8"'),
+  assert.ok(studio.includes('src="studio.js?v=20261102-photo10"'),
     'editor controller must bypass cached pre-release JavaScript');
   assert.ok(controller.includes("const PUBLIC_RELEASE_TAG = '" + tag + "'"),
     'official PDF cache revision should match the visible JavaScript release');
