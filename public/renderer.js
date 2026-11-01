@@ -522,6 +522,11 @@ function renderCulturePage(issue, pageNum, totalPages, options) {
         <div class="announcements-grid">
           ${announcementsHTML}
         </div>
+
+        <!-- Keep remaining culture-page space deliberately unboxed and calm. -->
+        <div class="culture-watermark" aria-hidden="true">
+          <img src="${resolveUrl('assets/brand/galata-silhouette.svg', prefix)}" alt="" />
+        </div>
       </div>
 
       ${renderPageFooter(issue, pageNum, totalPages)}
@@ -689,7 +694,7 @@ export function renderIssueToHTML(issue, options = {}) {
   }
 
   const docTitle = options.title || `Galata Rotary Kulübü Bülteni - ${issue.month || ''} ${issue.year || 2026} (Sayı ${issue.issueNumber || 1})`;
-  const printCssUrl = resolveUrl('styles/bulletin-print.css?v=20261101-editorial5', prefix);
+  const printCssUrl = resolveUrl('styles/bulletin-print.css?v=20261101-editorial6', prefix);
 
   return `<!DOCTYPE html>
 <html lang="tr">

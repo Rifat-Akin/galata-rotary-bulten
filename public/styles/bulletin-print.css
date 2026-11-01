@@ -1216,3 +1216,33 @@ html, body {
 .ribbon-month-year { line-height: 1.18; font-size: 11pt; overflow-wrap: normal; }
 .ribbon-issue-badge { display: block; border-radius: 4px; padding: 4px 8px; font-size: 8pt; line-height: 1.25; }
 .ribbon-theme-tag { font-size: 7.3pt; line-height: 1.3; overflow-wrap: break-word; }
+/* Independent A4 visual review: announcements should read as two concise
+   editorial cards, not two empty vertical forms covering half a page. */
+.culture-page-grid .announcements-grid {
+  flex: 0 0 auto;
+  align-items: stretch;
+}
+.culture-page-grid .announcement-box {
+  min-height: 49mm;
+  height: auto;
+}
+.culture-page-grid .announcement-box::after { margin-top: 5mm; }
+.culture-watermark {
+  display: flex;
+  flex: 1 1 0;
+  min-height: 25mm;
+  align-items: flex-end;
+  justify-content: center;
+  margin-top: 5mm;
+  overflow: hidden;
+  border-top: 1px solid #E2E8F0;
+}
+.culture-watermark img {
+  display: block;
+  width: 100%;
+  height: 38mm;
+  max-height: 100%;
+  object-fit: contain;
+  object-position: bottom center;
+  opacity: 0.17;
+}

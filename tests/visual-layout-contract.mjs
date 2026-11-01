@@ -27,8 +27,10 @@ for (const issueMeta of catalog) {
     const html = renderIssueToHTML(issue, {fullDoc: true});
     const pages = html.match(/<article class="a4-page/g) || [];
     assert.equal(pages.length, issueMeta.pageCount, 'must preserve accepted official pagination');
-    assert.equal(html.includes('styles/bulletin-print.css?v=20261101-editorial5'), true,
+    assert.equal(html.includes('styles/bulletin-print.css?v=20261101-editorial6'), true,
       'full-document print CSS must be cache-busted');
+    assert.match(html, /class="culture-watermark"/,
+      'culture pages must use a clear non-stretched decorative ending');
     const indexBlock = /<ol class="cover-contents-list">([\s\S]*?)<\/ol>/.exec(html);
     assert.ok(indexBlock, 'cover must include a source-derived table of contents');
     assert.equal((indexBlock[1].match(/<li>/g) || []).length, issue.articles.length,
@@ -61,8 +63,10 @@ test('typography, culture features and cache version are designed for readable A
   assert.match(block('.article-summary'), /font-size:\s*9\.4pt/);
   assert.match(block('.book-cover-img'), /height:\s*70mm/);
   assert.match(block('.announcement-box-content'), /font-size:\s*8\.8pt/);
-  assert.match(studio, /styles\/bulletin-print\.css\?v=20261101-editorial5/);
-  assert.match(studio, /styles\/studio\.css\?v=20261101-editorial5/);
+  assert.match(block('.culture-page-grid .announcements-grid'), /flex:\s*0 0 auto/);
+  assert.match(block('.culture-watermark img'), /object-fit:\s*contain/);
+  assert.match(studio, /styles\/bulletin-print\.css\?v=20261101-editorial6/);
+  assert.match(studio, /styles\/studio\.css\?v=20261101-editorial6/);
 });
 
 test('CDP printer rejects clipped gallery captions, cropped photos and empty media area', () => {
