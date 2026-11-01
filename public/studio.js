@@ -451,14 +451,14 @@ function createPhotoRowElement(photo, artIndex, photoIndex) {
   row.dataset.photoIndex = photoIndex;
 
   row.innerHTML = `
-    <img src="${escapeAttr(photo.url || 'assets/brand/galata-silhouette.svg')}" class="photo-preview-thumb" alt="Thumb" onerror="this.src='assets/brand/galata-silhouette.svg'">
+    <img src="${escapeAttr(photo.url || 'assets/brand/galata-silhouette.svg')}" class="photo-preview-thumb" alt="Haber ${artIndex + 1}, fotoğraf ${photoIndex + 1} önizlemesi" onerror="this.src='assets/brand/galata-silhouette.svg'">
     <div class="photo-inputs">
-      <input type="text" class="photo-url-input" value="${escapeAttr(photo.url || '')}" placeholder="Görsel Yolu (assets/photos/...)" data-pindex="${photoIndex}" data-art-index="${artIndex}">
-      <input type="text" class="photo-caption-input" value="${escapeAttr(photo.caption || '')}" placeholder="Fotoğraf Açıklaması" data-pindex="${photoIndex}" data-art-index="${artIndex}">
+      <input type="text" class="photo-url-input" aria-label="Haber ${artIndex + 1}, fotoğraf ${photoIndex + 1}: görsel yolu" value="${escapeAttr(photo.url || '')}" placeholder="Görsel Yolu (assets/photos/...)" data-pindex="${photoIndex}" data-art-index="${artIndex}">
+      <input type="text" class="photo-caption-input" aria-label="Haber ${artIndex + 1}, fotoğraf ${photoIndex + 1}: açıklama" value="${escapeAttr(photo.caption || '')}" placeholder="Fotoğraf Açıklaması" data-pindex="${photoIndex}" data-art-index="${artIndex}">
     </div>
     <label class="file-upload-label" style="padding:4px 8px; margin:0;" title="Yeni Fotoğraf Yükle">
       <span>📁</span>
-      <input type="file" class="hidden-file-input" data-art-index="${artIndex}" data-photo-index="${photoIndex}" accept="image/*">
+      <input type="file" class="hidden-file-input" aria-label="Haber ${artIndex + 1}, fotoğraf ${photoIndex + 1}: dosya seç" data-art-index="${artIndex}" data-photo-index="${photoIndex}" accept="image/*">
     </label>
     <button type="button" class="article-delete-btn" style="padding:2px 6px;" data-action="delete-photo" data-art-index="${artIndex}" data-photo-index="${photoIndex}" title="Fotoğrafı Kaldır">
       ✕
@@ -558,6 +558,13 @@ function createArticleCardElement(art, index, isCollapsed = false) {
       </div>
     </div>
   `;
+
+  // Dynamic card fields must have real accessible names, not placeholders.
+  card.querySelectorAll('.art-field').forEach(field => {
+    const group = field.closest?.('.form-group');
+    const title = group?.querySelector?.('.form-label')?.textContent?.trim();
+    field.setAttribute?.('aria-label', `Haber ${index + 1}: ${title || field.dataset.field}`);
+  });
 
   // Append photo items to list
   const photosList = card.querySelector('.photos-list');
@@ -979,7 +986,20 @@ function applyZoom() {
     scale = Math.round(scale * 100) / 100;
   }
 
+  // The fit-scale A4 can remain centered, but full-size mobile reading must
+  // be left-aligned so both edges are reachable by horizontal panning.
+  // Test/embedded DOM implementations may not expose computedStyle; use
+  // safe paddings rather than allowing a successful save to fall back to draft.
+  const viewportStyle = window.getComputedStyle?.(viewport)
+    || { paddingLeft: '0', paddingRight: '0' };
+  const availableWidth = viewport.clientWidth
+    - (parseFloat(viewportStyle.paddingLeft) || 0)
+    - (parseFloat(viewportStyle.paddingRight) || 0);
+  const needsHorizontalPan = 794 * scale > availableWidth + 1;
+  viewport.style.justifyContent = needsHorizontalPan ? 'flex-start' : 'center';
+  stage.style.transformOrigin = needsHorizontalPan ? 'top left' : 'top center';
   stage.style.transform = `scale(${scale})`;
+  if (!needsHorizontalPan) viewport.scrollLeft = 0;
   const percentStr = `${Math.round(scale * 100)}%`;
   if (zoomText) zoomText.textContent = percentStr;
   if (slider) slider.value = Math.round(scale * 100);
@@ -1429,15 +1449,51 @@ async function startNewIssue(payload) {
   }
 }
 
+let focusBeforeNewIssueModal = null;
+
 function openNewIssueModal() {
   const modal = document.getElementById('modal-new-issue');
-  if (modal) modal.classList.add('active');
+  if (!modal) return;
+  focusBeforeNewIssueModal = document.activeElement;
+  modal.classList.add('active');
+  modal.setAttribute('aria-hidden', 'false');
+  document.getElementById('new-issue-month')?.focus();
 }
 
 function closeNewIssueModal() {
   const modal = document.getElementById('modal-new-issue');
-  if (modal) modal.classList.remove('active');
+  if (!modal) return;
+  modal.classList.remove('active');
+  modal.setAttribute('aria-hidden', 'true');
+  if (focusBeforeNewIssueModal?.isConnected) focusBeforeNewIssueModal.focus();
+  focusBeforeNewIssueModal = null;
 }
+
+// Prevent keyboard focus from leaking behind a modal. Escape restores focus.
+function handleNewIssueModalKeydown(event) {
+  const modal = document.getElementById('modal-new-issue');
+  if (!modal?.classList.contains('active')) return;
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    closeNewIssueModal();
+    return;
+  }
+  if (event.key !== 'Tab') return;
+  const focusable = [...modal.querySelectorAll(
+    'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])'
+  )].filter(el => el.getClientRects().length);
+  if (!focusable.length) return;
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+}
+document.addEventListener('keydown', handleNewIssueModalKeydown);
 
 /**
  * Attach DOM Event Handlers
@@ -1451,6 +1507,19 @@ window.addEventListener('beforeunload', event => {
 document.addEventListener('DOMContentLoaded', () => {
   // 1. Initial Load
   loadIssuesList();
+
+  // On phones, leave Save/PDF immediately visible and put less common
+  // actions behind an explicitly labeled, keyboard-operable disclosure.
+  const moreActionsBtn = document.getElementById('btn-more-actions');
+  const actionToolbar = document.getElementById('studio-header-actions');
+  moreActionsBtn?.addEventListener('click', () => {
+    const expanded = actionToolbar?.classList.toggle('expanded') || false;
+    moreActionsBtn.setAttribute('aria-expanded', String(expanded));
+    moreActionsBtn.setAttribute('aria-label',
+      expanded ? 'Ek bülten işlemlerini gizle' : 'Diğer bülten işlemlerini göster');
+    const caption = moreActionsBtn.querySelector('span:last-child');
+    if (caption) caption.textContent = expanded ? 'Gizle' : 'Diğerleri';
+  });
 
   // 2. Tab Navigation
   document.querySelectorAll('.tab-btn').forEach(btn => {

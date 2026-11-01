@@ -66,7 +66,7 @@ test('typography, culture features and cache version are designed for readable A
   assert.match(block('.culture-page-grid .announcements-grid'), /flex:\s*0 0 auto/);
   assert.match(block('.culture-watermark img'), /object-fit:\s*contain/);
   assert.match(studio, /styles\/bulletin-print\.css\?v=20261101-editorial6/);
-  assert.match(studio, /styles\/studio\.css\?v=20261101-editorial6/);
+  assert.match(studio, /styles\/studio\.css\?v=20261102-ui8/);
 });
 
 test('Pages uses cache-versioned modules and officially downloaded PDFs', () => {
@@ -74,12 +74,29 @@ test('Pages uses cache-versioned modules and officially downloaded PDFs', () => 
   const tag = '20261101-editorial7';
   assert.ok(studio.includes('src="renderer.js?v=' + tag + '"'),
     'renderer module must bypass cached pre-release JavaScript');
-  assert.ok(studio.includes('src="studio.js?v=' + tag + '"'),
+  assert.ok(studio.includes('src="studio.js?v=20261102-ui8"'),
     'editor controller must bypass cached pre-release JavaScript');
   assert.ok(controller.includes("const PUBLIC_RELEASE_TAG = '" + tag + "'"),
     'official PDF cache revision should match the visible JavaScript release');
   assert.ok(controller.includes("'output/' + officialPdfName + '?v=' + PUBLIC_RELEASE_TAG"),
     'direct PDF downloads must bypass stale browser cache');
+});
+
+test('responsive UI includes named touch actions, visible tabs, modal focus, and reader zoom', () => {
+  const shell = fs.readFileSync(path.join(root, 'public/styles/studio.css'), 'utf8');
+  const controller = fs.readFileSync(path.join(root, 'public/studio.js'), 'utf8');
+  assert.match(shell, /Mobile compact action drawer/);
+  assert.match(shell, /grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/);
+  assert.match(shell, /\.zoom-btn-group \.zoom-chip\[data-zoom="1\.0"\]/);
+  assert.match(shell, /\.studio-header-actions\.expanded \.mobile-secondary-action/);
+  assert.match(studio, /id="btn-more-actions"/);
+  assert.match(studio, /aria-controls="studio-header-actions"/);
+  assert.match(studio, /id="modal-new-issue" class="modal-overlay" aria-hidden="true"/);
+  assert.match(studio, /role="dialog" aria-modal="true"/);
+  assert.match(studio, /for="inp-issue-number"/);
+  assert.match(studio, /for="new-issue-month"/);
+  assert.match(controller, /function handleNewIssueModalKeydown/);
+  assert.match(controller, /needsHorizontalPan/);
 });
 
 test('CDP printer rejects clipped gallery captions, cropped photos and empty media area', () => {
