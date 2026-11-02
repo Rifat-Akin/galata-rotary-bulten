@@ -196,3 +196,23 @@ test('editor lead selection is explicit, reversible and does not mutate original
   assert.match(controller, /leadPhotoIndex/);
   assert.match(block('.editorial-duo'), /align-content:\s*start/);
 });
+
+
+test('gallery count contract blocks impossible compositions and preserves source media', () => {
+  const issue = JSON.parse(fs.readFileSync(path.join(root, 'data/issues/2026-09-eylul.json'), 'utf8'));
+  const originals = issue.articles[1].photos.map(p => p.url);
+  issue.articles[1].layout = 'editorial-duo'; // Invalid: four photos require bento-4
+  let html = renderIssueToHTML(issue);
+  const section = html.slice(html.indexOf('data-page-index="4"'), html.indexOf('data-page-index="5"'));
+  assert.match(section, /class="bento-4"/);
+  issue.articles[1].photos.push({...issue.articles[1].photos[0]});
+  assert.throws(() => renderIssueToHTML(issue), /en fazla 4 fotoğraf/);
+  assert.deepEqual(issue.articles[1].photos.slice(0, 4).map(p => p.url), originals);
+  const controller = fs.readFileSync(path.join(root, 'public/studio.js'), 'utf8');
+  const validator = fs.readFileSync(path.join(root, 'scripts/validate-issues.mjs'), 'utf8');
+  assert.match(controller, /btn\.disabled = !compatible/);
+  assert.match(controller, /addButton\.disabled = count >= 4/);
+  assert.match(controller, /Fotoğraf sayısıyla uyumsuz düzen seçilemez/);
+  assert.match(validator, /'editorial-duo'/);
+  assert.match(validator, /4 fotoğraftan fazlası/);
+});

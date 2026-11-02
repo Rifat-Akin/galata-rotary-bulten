@@ -373,6 +373,9 @@ function arrangePhotosForPrint(photos, leadIndex) {
 function renderBentoGrid(article, options) {
   const prefix = options.assetPrefix || '';
   const photos = article.photos || [];
+  if (photos.length > 4) {
+    throw new Error('Bir haberde en fazla 4 fotoğraf kullanılabilir. Fazla görselleri ayrı habere taşıyın.');
+  }
   const displayPhotos = arrangePhotosForPrint(photos, resolveLeadPhotoIndex(article));
   // Legacy two-col hints now mean a dominant feature + companion, never
   // two equally wide rigid panels. A one-photo card always gets full width.
@@ -381,11 +384,10 @@ function renderBentoGrid(article, options) {
     : photos.length === 2 ? 'editorial-duo'
     : photos.length === 3 ? 'bento-3'
     : 'bento-4';
-  const requestedLayout = article.layout || inferredLayout;
-  const layout = photos.length <= 1 ? 'single-col'
-    : requestedLayout === 'two-col' ? 'editorial-duo'
-    : ['single-col', 'editorial-duo', 'bento-3', 'bento-4'].includes(requestedLayout)
-      ? requestedLayout : inferredLayout;
+  const requestedLayout = article.layout === 'two-col' ? 'editorial-duo' : article.layout;
+  // Count and print geometry are one contract: never render a 4-photo article
+  // inside a 2-photo gallery, even if an imported draft contains stale layout.
+  const layout = requestedLayout === inferredLayout ? requestedLayout : inferredLayout;
 
   if (photos.length === 0) {
     return '';

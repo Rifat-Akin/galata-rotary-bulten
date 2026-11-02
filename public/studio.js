@@ -487,12 +487,25 @@ function syncLeadPhotoButtons(card, index) {
 
 function setArticleLayoutControls(card, layout) {
   if (!card) return;
+  const count = currentIssue?.articles?.[Number(card.dataset.index)]?.photos?.length ?? 0;
+  const recommended = defaultPhotoLayout(count);
   const normalized = layout === 'two-col' ? 'editorial-duo' : layout;
+  const selected = normalized === recommended ? normalized : recommended;
   const badge = card.querySelector?.('.article-bento-badge');
-  if (badge) badge.textContent = normalized === 'editorial-duo' ? 'Ana + Destek' : normalized;
+  if (badge) badge.textContent = selected === 'editorial-duo' ? 'Ana + Destek' : selected;
   const switcher = card.querySelector?.('.bento-switcher');
-  switcher?.querySelectorAll?.('.bento-option-btn').forEach(btn =>
-    btn.classList.toggle('active', btn.dataset.layout === normalized));
+  switcher?.querySelectorAll?.('.bento-option-btn').forEach(btn => {
+    const compatible = btn.dataset.layout === recommended;
+    btn.disabled = !compatible;
+    btn.setAttribute('aria-disabled', String(!compatible));
+    btn.classList.toggle('active', compatible && btn.dataset.layout === selected);
+    if (!compatible) btn.title = count + ' fotoğraf için uygun olmayan düzen';
+  });
+  const addButton = card.querySelector?.('[data-action="add-photo"]');
+  if (addButton) {
+    addButton.disabled = count >= 4;
+    addButton.title = count >= 4 ? 'Bir haberde en fazla 4 fotoğraf kullanılabilir' : 'Fotoğraf ekle';
+  }
 }
 
 function createArticleCardElement(art, index, isCollapsed = false) {
@@ -501,9 +514,7 @@ function createArticleCardElement(art, index, isCollapsed = false) {
   card.dataset.index = index;
 
   const photoCount = (art.photos || []).length;
-  const bentoLayout = photoCount <= 1 ? 'single-col'
-    : art.layout === 'two-col' ? 'editorial-duo'
-    : (art.layout || defaultPhotoLayout(photoCount));
+  const bentoLayout = defaultPhotoLayout(photoCount);
   const displayTitle = art.title ? (art.title.length > 28 ? art.title.substring(0, 28) + '...' : art.title) : 'Başlıksız Haber';
 
   card.innerHTML = `
@@ -599,7 +610,7 @@ function createArticleCardElement(art, index, isCollapsed = false) {
   (art.photos || []).forEach((photo, pIdx) => {
     photosList.appendChild(createPhotoRowElement(photo, index, pIdx, globalThis.BulletinRenderer?.resolveLeadPhotoIndex?.(art) ?? 0));
   });
-
+  setArticleLayoutControls(card, bentoLayout);
   return card;
 }
 
@@ -634,6 +645,10 @@ function renderArticleCards() {
 function addPhotoToArticle(artIdx) {
   if (!currentIssue.articles || !currentIssue.articles[artIdx]) return;
   if (!currentIssue.articles[artIdx].photos) currentIssue.articles[artIdx].photos = [];
+  if (currentIssue.articles[artIdx].photos.length >= 4) {
+    showToast('Bir haberde en fazla 4 fotoğraf kullanılabilir. Yeni bir haber oluşturabilirsiniz.', 'error');
+    return;
+  }
 
   const newPhoto = {
     url: 'assets/brand/galata-silhouette.svg',
@@ -660,6 +675,7 @@ function addPhotoToArticle(artIdx) {
     if (photosList) {
       const newRow = createPhotoRowElement(newPhoto, artIdx, photoIndex, globalThis.BulletinRenderer?.resolveLeadPhotoIndex?.(currentIssue.articles[artIdx]) ?? 0);
       photosList.appendChild(newRow);
+      syncLeadPhotoButtons(card, globalThis.BulletinRenderer?.resolveLeadPhotoIndex?.(currentIssue.articles[artIdx]) ?? 0);
 
       if (countLabel) {
         countLabel.textContent = `Fotoğraflar (${currentIssue.articles[artIdx].photos.length})`;
@@ -684,6 +700,7 @@ function deletePhotoFromArticle(artIdx, photoIndex) {
   if (!currentIssue.articles || !currentIssue.articles[artIdx] || !currentIssue.articles[artIdx].photos) return;
 
   const article = currentIssue.articles[artIdx];
+  if (!Number.isInteger(photoIndex) || photoIndex < 0 || photoIndex >= article.photos.length) return;
   const leadIndex = globalThis.BulletinRenderer?.resolveLeadPhotoIndex?.(article) ?? 0;
   article.photos.splice(photoIndex, 1);
   article.leadPhotoIndex = article.photos.length ? (leadIndex === photoIndex ? 0 : Math.max(0, leadIndex > photoIndex ? leadIndex - 1 : leadIndex)) : undefined;
@@ -1726,6 +1743,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const layout = target.dataset.layout;
         const switcher = target.closest('.bento-switcher');
         const artIdx = parseInt(switcher.dataset.artIndex, 10);
+        const article = currentIssue?.articles?.[artIdx];
+        if (!article || layout !== defaultPhotoLayout((article.photos || []).length)) {
+          showToast('Fotoğraf sayısıyla uyumsuz düzen seçilemez.', 'error');
+          return;
+        }
 
         if (currentIssue.articles && currentIssue.articles[artIdx]) {
           currentIssue.articles[artIdx].layout = layout;

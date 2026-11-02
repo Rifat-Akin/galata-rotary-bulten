@@ -241,11 +241,26 @@ function validateIssue(filename) {
       if (!art.title || !art.summary || !art.layout) {
         errors.push(`Haber #${idx + 1} (${art.id || 'isimsiz'}) Eksik Bilgi: title, summary veya layout eksik`);
       }
-      const allowedLayouts = ['single-col', 'two-col', 'bento-3', 'bento-4'];
+      const allowedLayouts = ['single-col', 'two-col', 'editorial-duo', 'bento-3', 'bento-4'];
       if (!allowedLayouts.includes(art.layout)) {
         errors.push(`Haber #${idx + 1} Geçersiz Layout: "${art.layout}". İzin verilenler: ${allowedLayouts.join(', ')}`);
       }
       if (Array.isArray(art.photos)) {
+        const count = art.photos.length;
+        if (count > 4) {
+          errors.push(`Haber #${idx + 1}: 4 fotoğraftan fazlası tek sayfada desteklenmiyor`);
+        }
+        const expected = count <= 1 ? 'single-col' : count === 2 ? 'editorial-duo' :
+          count === 3 ? 'bento-3' : 'bento-4';
+        const legacySingle = count <= 1 && art.layout === 'two-col';
+        const actual = art.layout === 'two-col' ? 'editorial-duo' : art.layout;
+        if (actual !== expected && !legacySingle) {
+          errors.push(`Haber #${idx + 1}: ${count} fotoğrafa uyumsuz düzen "${art.layout}"`);
+        }
+        if (art.leadPhotoIndex !== undefined && ( !Number.isInteger(art.leadPhotoIndex) ||
+            art.leadPhotoIndex < 0 || art.leadPhotoIndex >= count )) {
+          errors.push(`Haber #${idx + 1}: Ana görsel indeksi fotoğraf sınırını aşıyor`);
+        }
         art.photos.forEach((ph, pIdx) => {
           const phPath = resolveAssetPath(ph.url);
           if (!phPath || !fs.existsSync(phPath)) {
