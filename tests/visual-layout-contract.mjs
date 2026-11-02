@@ -186,7 +186,7 @@ test('editor lead selection is explicit, reversible and does not mutate original
   const original = articles[1].photos.map(photo => photo.url);
   const originalHtml = renderIssueToHTML(issue);
   assert.ok(originalHtml.indexOf('00005290.jpg') < originalHtml.indexOf('00005288.jpg'));
-  articles[1].leadPhotoIndex = 1;
+  articles[1].leadPhotoIndex = 0;
   const chosen = renderIssueToHTML(issue);
   const section = chosen.slice(chosen.indexOf('data-page-index="4"'), chosen.indexOf('data-page-index="5"'));
   assert.ok(section.indexOf('00005288.jpg') < section.indexOf('00005290.jpg'));
