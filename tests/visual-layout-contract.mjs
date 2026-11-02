@@ -206,7 +206,10 @@ test('gallery count contract blocks impossible compositions and preserves source
   const section = html.slice(html.indexOf('data-page-index="4"'), html.indexOf('data-page-index="5"'));
   assert.match(section, /class="bento-4"/);
   issue.articles[1].photos.push({...issue.articles[1].photos[0]});
-  assert.throws(() => renderIssueToHTML(issue), /en fazla 4 fotoğraf/);
+  const unusual = renderIssueToHTML(issue);
+  const extraSection = unusual.slice(unusual.indexOf('data-page-index="4"'), unusual.indexOf('data-page-index="5"'));
+  assert.equal((extraSection.match(/class="bento-photo-card/g) || []).length, 5,
+    'HTML preserves all source photographs while PDF acceptance rejects unsupported gallery sizes');
   assert.deepEqual(issue.articles[1].photos.slice(0, 4).map(p => p.url), originals);
   const controller = fs.readFileSync(path.join(root, 'public/studio.js'), 'utf8');
   const validator = fs.readFileSync(path.join(root, 'scripts/validate-issues.mjs'), 'utf8');
@@ -215,4 +218,5 @@ test('gallery count contract blocks impossible compositions and preserves source
   assert.match(controller, /Fotoğraf sayısıyla uyumsuz düzen seçilemez/);
   assert.match(validator, /'editorial-duo'/);
   assert.match(validator, /4 fotoğraftan fazlası/);
+  assert.match(printer, /Article contains more than four photos/);
 });

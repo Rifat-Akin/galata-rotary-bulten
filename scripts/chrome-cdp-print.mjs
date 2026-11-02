@@ -110,6 +110,9 @@ async function waitForPrintablePage(session) {
           const pages = document.querySelectorAll('.a4-page');
           const visualFailures = [];
           const articleCards = [...document.querySelectorAll('.article-card')];
+          if (articleCards.some(card => card.querySelectorAll('.bento-photo-card').length > 4)) {
+            visualFailures.push('Article contains more than four photos; split into separate stories');
+          }
           const issueIndex = document.querySelectorAll('.page-cover .cover-contents-list li');
           if (articleCards.length !== issueIndex.length) {
             visualFailures.push('Cover index and article count differ: ' +

@@ -373,9 +373,9 @@ function arrangePhotosForPrint(photos, leadIndex) {
 function renderBentoGrid(article, options) {
   const prefix = options.assetPrefix || '';
   const photos = article.photos || [];
-  if (photos.length > 4) {
-    throw new Error('Bir haberde en fazla 4 fotoğraf kullanılabilir. Fazla görselleri ayrı habere taşıyın.');
-  }
+  // The pure HTML renderer keeps every source image, including unusual imports.
+  // UI limits new entries, and the physical PDF gate rejects >4 until paginated
+  // galleries are implemented; never silently discard original photographs.
   const displayPhotos = arrangePhotosForPrint(photos, resolveLeadPhotoIndex(article));
   // Legacy two-col hints now mean a dominant feature + companion, never
   // two equally wide rigid panels. A one-photo card always gets full width.
