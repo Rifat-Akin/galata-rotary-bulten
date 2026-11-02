@@ -340,10 +340,39 @@ function renderPresidentPage(issue, pageNum, totalPages, options) {
 /**
  * Renders Bento Grid HTML based on article layout mode and photo list
  */
+// Editorial lead-frame curation for existing approved photo archives.
+// Posters/screenshots should not displace a true event photograph as a
+// full-width hero. The original article/photos JSON and captions are untouched.
+const CURATED_LEAD_PHOTOS = new Set([
+  'assets/photos/2026-08/00005203.jpg', // Zafer Bayramı opening
+  'assets/photos/2026-09/00005290.jpg', // Education meeting
+  'assets/photos/2026-09/00005393.jpg', // KAÇUV speaker
+  'assets/photos/2026-10/00005466.jpg'  // RYLA participants
+]);
+
+function arrangePhotosForPrint(photos) {
+  if (photos.length !== 4) return photos;
+  const leadIndex = photos.findIndex(photo => CURATED_LEAD_PHOTOS.has(photo.url));
+  if (leadIndex <= 0) return photos;
+  return [photos[leadIndex], ...photos.filter((_, index) => index !== leadIndex)];
+}
+
 function renderBentoGrid(article, options) {
   const prefix = options.assetPrefix || '';
   const photos = article.photos || [];
-  const layout = article.layout || (photos.length <= 1 ? 'single-col' : (photos.length === 2 ? 'two-col' : `bento-${Math.min(photos.length, 4)}`));
+  const displayPhotos = arrangePhotosForPrint(photos);
+  // Legacy two-col hints now mean a dominant feature + companion, never
+  // two equally wide rigid panels. A one-photo card always gets full width.
+  // Preserve existing editor-controlled bento choices for other scenarios.
+  const inferredLayout = photos.length <= 1 ? 'single-col'
+    : photos.length === 2 ? 'editorial-duo'
+    : photos.length === 3 ? 'bento-3'
+    : 'bento-4';
+  const requestedLayout = article.layout || inferredLayout;
+  const layout = photos.length <= 1 ? 'single-col'
+    : requestedLayout === 'two-col' ? 'editorial-duo'
+    : ['single-col', 'editorial-duo', 'bento-3', 'bento-4'].includes(requestedLayout)
+      ? requestedLayout : inferredLayout;
 
   if (photos.length === 0) {
     return '';
@@ -352,8 +381,8 @@ function renderBentoGrid(article, options) {
   return `
     <div class="bento-container">
       <div class="${escapeHTML(layout)}">
-        ${photos.map((p, idx) => `
-          <figure class="bento-photo-card">
+        ${displayPhotos.map((p, idx) => `
+          <figure class="bento-photo-card${idx === 0 && photos.length > 1 ? ' is-featured' : ''}">
             <img src="${resolveUrl(p.url, prefix)}" alt="${escapeHTML(p.caption || article.title)}" class="bento-img" onerror="this.style.opacity='0.4'" />
             ${p.caption ? `<figcaption class="bento-caption">${escapeHTML(p.caption)}</figcaption>` : ''}
           </figure>
@@ -694,7 +723,7 @@ export function renderIssueToHTML(issue, options = {}) {
   }
 
   const docTitle = options.title || `Galata Rotary Kulübü Bülteni - ${issue.month || ''} ${issue.year || 2026} (Sayı ${issue.issueNumber || 1})`;
-  const printCssUrl = resolveUrl('styles/bulletin-print.css?v=20261101-editorial6', prefix);
+  const printCssUrl = resolveUrl('styles/bulletin-print.css?v=20261102-photo10', prefix);
 
   return `<!DOCTYPE html>
 <html lang="tr">

@@ -129,6 +129,35 @@ async function waitForPrintablePage(session) {
               break;
             }
           }
+          // True print geometry: a two-photo spread must not silently fall
+          // back to two equal-width rectangles despite passing page-overflow.
+          for (const duet of document.querySelectorAll('.editorial-duo')) {
+            const frames = [...duet.querySelectorAll('.bento-photo-card')];
+            if (frames.length !== 2) {
+              visualFailures.push('Editorial duo must contain exactly two photo frames');
+              continue;
+            }
+            const wide = frames[0].getBoundingClientRect().width;
+            const narrow = frames[1].getBoundingClientRect().width;
+            if (narrow < 1 || wide / narrow < 1.55) {
+              visualFailures.push('Editorial duo lost its dominant visual hierarchy');
+            }
+            if (frames.some(frame => {
+              const s = getComputedStyle(frame);
+              return s.backgroundColor !== 'rgba(0, 0, 0, 0)' &&
+                s.backgroundColor !== 'transparent';
+            })) {
+              visualFailures.push('Editorial duo has unwanted solid photo panels');
+            }
+          }
+          for (const gallery of document.querySelectorAll('.bento-4')) {
+            const frames = [...gallery.querySelectorAll('.bento-photo-card')];
+            if (frames.length !== 4) continue;
+            if (frames[0].getBoundingClientRect().width <
+                frames[1].getBoundingClientRect().width * 2.1) {
+              visualFailures.push('Four-photo story lost its featured picture');
+            }
+          }
           const bookCovers = [...document.querySelectorAll('.book-cover-img')];
           if (bookCovers.some(img => getComputedStyle(img).objectFit !== 'contain')) {
             visualFailures.push('Book cover could be cropped');

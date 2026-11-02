@@ -20,7 +20,7 @@ let overflowCycleIndex = 0;
 
 // Asset release token: PDF downloads must not reuse a stale browser cache
 // after a new GitHub Pages publish. Keep synced with the module URLs in index.html.
-const PUBLIC_RELEASE_TAG = '20261101-editorial7';
+const PUBLIC_RELEASE_TAG = '20261102-photo10';
 
 // Official Pre-Rendered PDF Mapping
 const ISSUE_PDF_MAP = {
@@ -470,12 +470,31 @@ function createPhotoRowElement(photo, artIndex, photoIndex) {
 /**
  * Generates DOM for a single article card (accordion enabled)
  */
+function defaultPhotoLayout(count) {
+  return count <= 1 ? 'single-col'
+    : count === 2 ? 'editorial-duo'
+    : count === 3 ? 'bento-3' : 'bento-4';
+}
+
+function setArticleLayoutControls(card, layout) {
+  if (!card) return;
+  const normalized = layout === 'two-col' ? 'editorial-duo' : layout;
+  const badge = card.querySelector?.('.article-bento-badge');
+  if (badge) badge.textContent = normalized === 'editorial-duo' ? 'Ana + Destek' : normalized;
+  const switcher = card.querySelector?.('.bento-switcher');
+  switcher?.querySelectorAll?.('.bento-option-btn').forEach(btn =>
+    btn.classList.toggle('active', btn.dataset.layout === normalized));
+}
+
 function createArticleCardElement(art, index, isCollapsed = false) {
   const card = document.createElement('div');
   card.className = `article-card-item ${isCollapsed ? 'is-collapsed' : ''}`;
   card.dataset.index = index;
 
-  const bentoLayout = art.layout || 'two-col';
+  const photoCount = (art.photos || []).length;
+  const bentoLayout = photoCount <= 1 ? 'single-col'
+    : art.layout === 'two-col' ? 'editorial-duo'
+    : (art.layout || defaultPhotoLayout(photoCount));
   const displayTitle = art.title ? (art.title.length > 28 ? art.title.substring(0, 28) + '...' : art.title) : 'Başlıksız Haber';
 
   card.innerHTML = `
@@ -487,7 +506,7 @@ function createArticleCardElement(art, index, isCollapsed = false) {
         </span>
       </div>
       <div class="article-header-right">
-        <span class="article-bento-badge">${escapeHtml(bentoLayout)}</span>
+        <span class="article-bento-badge">${escapeHtml(bentoLayout === 'editorial-duo' ? 'Ana + Destek' : bentoLayout)}</span>
         <button type="button" class="article-delete-btn" data-action="delete-article" data-index="${index}" title="Bu haberi bültenden sil">
           ✕ Sil
         </button>
@@ -523,23 +542,23 @@ function createArticleCardElement(art, index, isCollapsed = false) {
 
       <!-- Dynamic Bento Layout Selector -->
       <div class="form-group">
-        <label class="form-label">Fotoğraf Izgara Düzeni (Bento Mizanpaj)</label>
+        <label class="form-label">Fotoğraf Mizanpajı (ana görsel + destekleyen kareler)</label>
         <div class="bento-switcher" data-art-index="${index}">
           <button type="button" class="bento-option-btn ${bentoLayout === 'single-col' ? 'active' : ''}" data-layout="single-col" title="Tek Görsel veya Dikey Kolon">
             <span class="bento-icon">▮</span>
             <span>Tek Kolon</span>
           </button>
-          <button type="button" class="bento-option-btn ${bentoLayout === 'two-col' ? 'active' : ''}" data-layout="two-col" title="İki Eşit Fotoğraf Kolonu">
+          <button type="button" class="bento-option-btn ${bentoLayout === 'editorial-duo' ? 'active' : ''}" data-layout="editorial-duo" title="Bir büyük ana görsel ve daha küçük destek görseli">
             <span class="bento-icon">▮▮</span>
-            <span>İki Kolon</span>
+            <span>Ana + Destek</span>
           </button>
           <button type="button" class="bento-option-btn ${bentoLayout === 'bento-3' ? 'active' : ''}" data-layout="bento-3" title="3 Fotoğraflı Asimetrik Bento Izgara">
             <span class="bento-icon">▤</span>
-            <span>Bento-3</span>
+            <span>Ana + 2 Foto</span>
           </button>
-          <button type="button" class="bento-option-btn ${bentoLayout === 'bento-4' ? 'active' : ''}" data-layout="bento-4" title="4 Fotoğraflı 2x2 Bento Izgara">
+          <button type="button" class="bento-option-btn ${bentoLayout === 'bento-4' ? 'active' : ''}" data-layout="bento-4" title="Bir büyük etkinlik fotoğrafı, altta üç destek görseli">
             <span class="bento-icon">⚏</span>
-            <span>Bento-4</span>
+            <span>Ana + 3 Foto</span>
           </button>
         </div>
       </div>
@@ -612,10 +631,13 @@ function addPhotoToArticle(artIdx) {
     caption: 'Yeni Fotoğraf Açıklaması'
   };
   currentIssue.articles[artIdx].photos.push(newPhoto);
+  currentIssue.articles[artIdx].layout = defaultPhotoLayout(
+    currentIssue.articles[artIdx].photos.length);
   const photoIndex = currentIssue.articles[artIdx].photos.length - 1;
 
   const card = document.querySelector(`.article-card-item[data-index="${artIdx}"]`);
   if (card) {
+    setArticleLayoutControls(card, currentIssue.articles[artIdx].layout);
     // Ensure card is expanded so user sees the new photo
     if (card.classList.contains('is-collapsed')) {
       card.classList.remove('is-collapsed');
@@ -653,9 +675,12 @@ function deletePhotoFromArticle(artIdx, photoIndex) {
   if (!currentIssue.articles || !currentIssue.articles[artIdx] || !currentIssue.articles[artIdx].photos) return;
 
   currentIssue.articles[artIdx].photos.splice(photoIndex, 1);
+  currentIssue.articles[artIdx].layout = defaultPhotoLayout(
+    currentIssue.articles[artIdx].photos.length);
 
   const card = document.querySelector(`.article-card-item[data-index="${artIdx}"]`);
   if (card) {
+    setArticleLayoutControls(card, currentIssue.articles[artIdx].layout);
     const photosList = card.querySelector(`.photos-list[data-art-index="${artIdx}"]`);
     const countLabel = card.querySelector('.photos-count-label');
 
@@ -716,7 +741,7 @@ function addNewArticle() {
     title: 'Yeni Etkinlik & Toplantı',
     venue: 'Grand Hyatt İstanbul Taksim',
     summary: 'Yeni etkinliğin veya projenin açıklaması buraya yazılacaktır.',
-    layout: 'two-col',
+    layout: 'single-col',
     photos: []
   };
 
@@ -1683,7 +1708,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Update badge on card header in-place
         const card = switcher.closest('.article-card-item');
         const badge = card?.querySelector('.article-bento-badge');
-        if (badge) badge.textContent = layout;
+        if (badge) badge.textContent = layout === 'editorial-duo' ? 'Ana + Destek' : layout;
 
         queuePreviewRender();
         return;
