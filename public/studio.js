@@ -20,7 +20,7 @@ let overflowCycleIndex = 0;
 
 // Asset release token: PDF downloads must not reuse a stale browser cache
 // after a new GitHub Pages publish. Keep synced with the module URLs in index.html.
-const PUBLIC_RELEASE_TAG = '20261102-photo10';
+const PUBLIC_RELEASE_TAG = '20261102-editorial11';
 
 // Official Pre-Rendered PDF Mapping
 const ISSUE_PDF_MAP = {
@@ -445,7 +445,7 @@ function syncModelFromForms() {
 /**
  * Generates DOM for a single photo row
  */
-function createPhotoRowElement(photo, artIndex, photoIndex) {
+function createPhotoRowElement(photo, artIndex, photoIndex, leadIndex = 0) {
   const row = document.createElement('div');
   row.className = 'photo-item-row';
   row.dataset.photoIndex = photoIndex;
@@ -453,6 +453,7 @@ function createPhotoRowElement(photo, artIndex, photoIndex) {
   row.innerHTML = `
     <img src="${escapeAttr(photo.url || 'assets/brand/galata-silhouette.svg')}" class="photo-preview-thumb" alt="Haber ${artIndex + 1}, fotoğraf ${photoIndex + 1} önizlemesi" onerror="this.src='assets/brand/galata-silhouette.svg'">
     <div class="photo-inputs">
+      <button type="button" class="photo-lead-btn" data-action="set-lead-photo" data-art-index="${artIndex}" data-photo-index="${photoIndex}" aria-pressed="${photoIndex === leadIndex}">${photoIndex === leadIndex ? "★ Ana görsel" : "☆ Ana görsel yap"}</button>
       <input type="text" class="photo-url-input" aria-label="Haber ${artIndex + 1}, fotoğraf ${photoIndex + 1}: görsel yolu" value="${escapeAttr(photo.url || '')}" placeholder="Görsel Yolu (assets/photos/...)" data-pindex="${photoIndex}" data-art-index="${artIndex}">
       <input type="text" class="photo-caption-input" aria-label="Haber ${artIndex + 1}, fotoğraf ${photoIndex + 1}: açıklama" value="${escapeAttr(photo.caption || '')}" placeholder="Fotoğraf Açıklaması" data-pindex="${photoIndex}" data-art-index="${artIndex}">
     </div>
@@ -474,6 +475,14 @@ function defaultPhotoLayout(count) {
   return count <= 1 ? 'single-col'
     : count === 2 ? 'editorial-duo'
     : count === 3 ? 'bento-3' : 'bento-4';
+}
+
+function syncLeadPhotoButtons(card, index) {
+  card?.querySelectorAll('.photo-lead-btn').forEach(btn => {
+    const selected = Number(btn.dataset.photoIndex) === index;
+    btn.textContent = selected ? '★ Ana görsel' : '☆ Ana görsel yap';
+    btn.setAttribute('aria-pressed', String(selected));
+  });
 }
 
 function setArticleLayoutControls(card, layout) {
@@ -588,7 +597,7 @@ function createArticleCardElement(art, index, isCollapsed = false) {
   // Append photo items to list
   const photosList = card.querySelector('.photos-list');
   (art.photos || []).forEach((photo, pIdx) => {
-    photosList.appendChild(createPhotoRowElement(photo, index, pIdx));
+    photosList.appendChild(createPhotoRowElement(photo, index, pIdx, globalThis.BulletinRenderer?.resolveLeadPhotoIndex?.(art) ?? 0));
   });
 
   return card;
@@ -649,7 +658,7 @@ function addPhotoToArticle(artIdx) {
     const countLabel = card.querySelector('.photos-count-label');
 
     if (photosList) {
-      const newRow = createPhotoRowElement(newPhoto, artIdx, photoIndex);
+      const newRow = createPhotoRowElement(newPhoto, artIdx, photoIndex, globalThis.BulletinRenderer?.resolveLeadPhotoIndex?.(currentIssue.articles[artIdx]) ?? 0);
       photosList.appendChild(newRow);
 
       if (countLabel) {
@@ -674,7 +683,10 @@ function addPhotoToArticle(artIdx) {
 function deletePhotoFromArticle(artIdx, photoIndex) {
   if (!currentIssue.articles || !currentIssue.articles[artIdx] || !currentIssue.articles[artIdx].photos) return;
 
-  currentIssue.articles[artIdx].photos.splice(photoIndex, 1);
+  const article = currentIssue.articles[artIdx];
+  const leadIndex = globalThis.BulletinRenderer?.resolveLeadPhotoIndex?.(article) ?? 0;
+  article.photos.splice(photoIndex, 1);
+  article.leadPhotoIndex = article.photos.length ? (leadIndex === photoIndex ? 0 : Math.max(0, leadIndex > photoIndex ? leadIndex - 1 : leadIndex)) : undefined;
   currentIssue.articles[artIdx].layout = defaultPhotoLayout(
     currentIssue.articles[artIdx].photos.length);
 
@@ -698,6 +710,8 @@ function deletePhotoFromArticle(artIdx, photoIndex) {
         const capInp = row.querySelector('.photo-caption-input');
         const fileInp = row.querySelector('.hidden-file-input');
         const delBtn = row.querySelector('[data-action="delete-photo"]');
+        const leadBtn = row.querySelector('.photo-lead-btn');
+        if (leadBtn) { leadBtn.dataset.artIndex = artIdx; leadBtn.dataset.photoIndex = newPIdx; }
 
         if (urlInp) {
           urlInp.dataset.pindex = newPIdx;
@@ -720,6 +734,7 @@ function deletePhotoFromArticle(artIdx, photoIndex) {
       if (countLabel) {
         countLabel.textContent = `Fotoğraflar (${currentIssue.articles[artIdx].photos.length})`;
       }
+      syncLeadPhotoButtons(card, article.leadPhotoIndex ?? 0);
     }
   }
 
@@ -822,6 +837,8 @@ function deleteArticle(idx) {
       const capInp = row.querySelector('.photo-caption-input');
       const fileInp = row.querySelector('.hidden-file-input');
       const photoDelBtn = row.querySelector('[data-action="delete-photo"]');
+      const leadBtn = row.querySelector('.photo-lead-btn');
+      if (leadBtn) leadBtn.dataset.artIndex = newIdx;
 
       if (urlInp) urlInp.dataset.artIndex = newIdx;
       if (capInp) capInp.dataset.artIndex = newIdx;
@@ -1286,7 +1303,7 @@ async function saveCurrentIssue() {
     hasUnsavedChanges = false;
     showToast(serverSaveFailed
       ? 'Sunucuya kaydedilemedi! Yalnız tarayıcıda taslak var. JSON dosyasını indirin.'
-      : 'Tarayıcı taslağı kaydedildi. GitHub ve resmî PDF güncellenmedi.',
+      : 'Taslak yalnız bu tarayıcıda saklandı. Yayımlanmadı; kalıcı aktarım için JSON İndir kullanın.',
       serverSaveFailed ? 'error' : 'info');
     renderLivePreview();
     updateIssueSelectOption(currentIssue.id, true);
@@ -1681,6 +1698,18 @@ document.addEventListener('DOMContentLoaded', () => {
       if (target.dataset.action === 'add-photo') {
         const artIdx = parseInt(target.dataset.artIndex, 10);
         addPhotoToArticle(artIdx);
+        return;
+      }
+
+      if (target.dataset.action === 'set-lead-photo') {
+        const artIdx = Number(target.dataset.artIndex);
+        const photoIndex = Number(target.dataset.photoIndex);
+        const article = currentIssue?.articles?.[artIdx];
+        if (article && Number.isInteger(photoIndex) && photoIndex >= 0 && photoIndex < (article.photos || []).length) {
+          article.leadPhotoIndex = photoIndex;
+          syncLeadPhotoButtons(target.closest('.article-card-item'), photoIndex);
+          queuePreviewRender();
+        }
         return;
       }
 
