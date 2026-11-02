@@ -1686,3 +1686,7 @@ body.mode-reader-active .a4-page {
   }
   body.mode-reader-active #btn-refresh-preview { flex: 0 0 auto; }
 }
+/* Accessible featured-image choice: clearly separate source order from visual prominence. */
+.photo-lead-btn { width:100%; text-align:left; padding:6px 8px; border:1px solid #B7C7D9; border-radius:5px; background:#FFF; color:#254466; font-size:11px; font-weight:700; cursor:pointer; }
+.photo-lead-btn[aria-pressed="true"] { background:#FFF3D1; border-color:#C58A00; color:#684600; }
+.photo-lead-btn:focus-visible { outline:3px solid #1857B3; outline-offset:2px; }
