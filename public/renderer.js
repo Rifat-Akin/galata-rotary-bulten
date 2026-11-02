@@ -350,17 +350,30 @@ const CURATED_LEAD_PHOTOS = new Set([
   'assets/photos/2026-10/00005466.jpg'  // RYLA participants
 ]);
 
-function arrangePhotosForPrint(photos) {
-  if (photos.length !== 4) return photos;
-  const leadIndex = photos.findIndex(photo => CURATED_LEAD_PHOTOS.has(photo.url));
-  if (leadIndex <= 0) return photos;
+// An editor selection always wins over the original archive curation.
+export function resolveLeadPhotoIndex(article) {
+  const photos = Array.isArray(article?.photos) ? article.photos : [];
+  if (!photos.length) return -1;
+  const preferred = article.leadPhotoIndex;
+  if (Number.isInteger(preferred) && preferred >= 0 && preferred < photos.length) {
+    return preferred;
+  }
+  if (photos.length === 4) {
+    const curatedIndex = photos.findIndex(photo => CURATED_LEAD_PHOTOS.has(photo.url));
+    if (curatedIndex >= 0) return curatedIndex;
+  }
+  return 0;
+}
+
+function arrangePhotosForPrint(photos, leadIndex) {
+  if (leadIndex <= 0 || leadIndex >= photos.length) return photos;
   return [photos[leadIndex], ...photos.filter((_, index) => index !== leadIndex)];
 }
 
 function renderBentoGrid(article, options) {
   const prefix = options.assetPrefix || '';
   const photos = article.photos || [];
-  const displayPhotos = arrangePhotosForPrint(photos);
+  const displayPhotos = arrangePhotosForPrint(photos, resolveLeadPhotoIndex(article));
   // Legacy two-col hints now mean a dominant feature + companion, never
   // two equally wide rigid panels. A one-photo card always gets full width.
   // Preserve existing editor-controlled bento choices for other scenarios.
@@ -723,7 +736,7 @@ export function renderIssueToHTML(issue, options = {}) {
   }
 
   const docTitle = options.title || `Galata Rotary Kulübü Bülteni - ${issue.month || ''} ${issue.year || 2026} (Sayı ${issue.issueNumber || 1})`;
-  const printCssUrl = resolveUrl('styles/bulletin-print.css?v=20261102-photo10', prefix);
+  const printCssUrl = resolveUrl('styles/bulletin-print.css?v=20261102-editorial11', prefix);
 
   return `<!DOCTYPE html>
 <html lang="tr">
@@ -763,6 +776,7 @@ if (typeof globalThis !== 'undefined') {
   globalThis.BulletinRenderer = {
     renderIssueToHTML,
     renderIssueToDOM,
+    resolveLeadPhotoIndex,
     ROTARY_MONTHS,
     ROTARY_FOCUS_AREAS,
     FOUR_WAY_TEST
