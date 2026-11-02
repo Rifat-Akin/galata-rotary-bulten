@@ -32,7 +32,7 @@ for (const issueMeta of catalog) {
     const html = renderIssueToHTML(issue, {fullDoc: true});
     const pages = html.match(/<article class="a4-page/g) || [];
     assert.equal(pages.length, issueMeta.pageCount, 'must preserve accepted official pagination');
-    assert.equal(html.includes('styles/bulletin-print.css?v=20261102-photo10'), true,
+    assert.equal(html.includes('styles/bulletin-print.css?v=20261102-editorial11'), true,
       'full-document print CSS must be cache-busted');
     assert.match(html, /class="culture-watermark"/,
       'culture pages must use a clear non-stretched decorative ending');
@@ -129,16 +129,16 @@ test('typography, culture features and cache version are designed for readable A
   assert.match(block('.announcement-box-content'), /font-size:\s*8\.8pt/);
   assert.match(block('.culture-page-grid .announcements-grid'), /flex:\s*0 0 auto/);
   assert.match(block('.culture-watermark img'), /object-fit:\s*contain/);
-  assert.match(studio, /styles\/bulletin-print\.css\?v=20261102-photo10/);
+  assert.match(studio, /styles\/bulletin-print\.css\?v=20261102-editorial11/);
   assert.match(studio, /styles\/studio\.css\?v=20261102-ui9/);
 });
 
 test('Pages uses cache-versioned modules and officially downloaded PDFs', () => {
   const controller = fs.readFileSync(path.join(root, 'public/studio.js'), 'utf8');
-  const tag = '20261102-photo10';
+  const tag = '20261102-editorial11';
   assert.ok(studio.includes('src="renderer.js?v=' + tag + '"'),
     'renderer module must bypass cached pre-release JavaScript');
-  assert.ok(studio.includes('src="studio.js?v=20261102-photo10"'),
+  assert.ok(studio.includes('src="studio.js?v=20261102-editorial11"'),
     'editor controller must bypass cached pre-release JavaScript');
   assert.ok(controller.includes("const PUBLIC_RELEASE_TAG = '" + tag + "'"),
     'official PDF cache revision should match the visible JavaScript release');
@@ -179,4 +179,20 @@ test('CDP printer rejects clipped gallery captions, cropped photos and empty med
   assert.match(printer, /Article photo uses a cropping object-fit/);
   assert.match(printer, /Cover index and article count differ/);
   assert.match(printer, /A4 page overflow detected/);
+});
+test('editor lead selection is explicit, reversible and does not mutate original photo order', () => {
+  const issue = JSON.parse(fs.readFileSync(path.join(root, 'data/issues/2026-09-eylul.json'), 'utf8'));
+  const {articles} = issue;
+  const original = articles[1].photos.map(photo => photo.url);
+  const originalHtml = renderIssueToHTML(issue);
+  assert.ok(originalHtml.indexOf('00005290.jpg') < originalHtml.indexOf('00005288.jpg'));
+  articles[1].leadPhotoIndex = 1;
+  const chosen = renderIssueToHTML(issue);
+  const section = chosen.slice(chosen.indexOf('data-page-index="4"'), chosen.indexOf('data-page-index="5"'));
+  assert.ok(section.indexOf('00005288.jpg') < section.indexOf('00005290.jpg'));
+  assert.deepEqual(articles[1].photos.map(photo => photo.url), original);
+  const controller = fs.readFileSync(path.join(root, 'public/studio.js'), 'utf8');
+  assert.match(controller, /set-lead-photo/);
+  assert.match(controller, /leadPhotoIndex/);
+  assert.match(block('.editorial-duo'), /align-content:\s*start/);
 });
