@@ -35,6 +35,7 @@
   "articles": [
     {
       "id": "art-01",
+      "storyStyle": "feature",
       "category": "Kulüp Kararı",
       "date": "3 Ağustos 2026",
       "title": "Yeni Toplantı Mekânımız: Grand Hyatt İstanbul Taksim",

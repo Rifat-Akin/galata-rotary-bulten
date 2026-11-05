@@ -219,7 +219,10 @@ test('an explicit lead photo wins without reordering archived original photograp
 test('featured editorial hierarchy is opt-in and safe for original A4 archive', () => {
   const issue = JSON.parse(fs.readFileSync(
     path.join(root, 'data/issues/2026-09-eylul.json'), 'utf8'));
-  assert.doesNotMatch(renderIssueToHTML(issue), /article-card\s+story-feature/);
+  const original = structuredClone(issue);
+  delete original.articles[4].storyStyle;
+  assert.doesNotMatch(renderIssueToHTML(original), /article-card\s+story-feature/);
+  assert.equal(issue.articles[4].storyStyle, 'feature');
   issue.articles[0].storyStyle = 'feature';
   const html = renderIssueToHTML(issue);
   assert.match(html, /article-card\s+story-feature/);
@@ -251,4 +254,16 @@ test('stale imported grid hints cannot force an overflowing multi-photo column',
   const pageFour = html.split('data-page-index="4"')[1].split('data-page-index="5"')[0];
   assert.match(pageFour, /class="bento-4"/);
   assert.deepEqual(four.photos.map(photo => photo.url), original);
+});
+
+test('one distinct lead story per issue adds magazine rhythm without editing narratives', () => {
+  for (const id of ['2026-07-temmuz','2026-08-agustos','2026-09-eylul','2026-10-ekim']) {
+    const issue = JSON.parse(fs.readFileSync(path.join(root, 'data/issues', id + '.json'), 'utf8'));
+    assert.equal(issue.articles.filter(art => art.storyStyle === 'feature').length, 1, id);
+    const html = renderIssueToHTML(issue);
+    assert.match(html, /article-card\s+story-feature/, id);
+    const bare = structuredClone(issue);
+    for (const article of bare.articles) delete article.storyStyle;
+    assert.equal(html.includes('class="bento-img"'), renderIssueToHTML(bare).includes('class="bento-img"'));
+  }
 });
