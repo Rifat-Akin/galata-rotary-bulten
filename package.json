@@ -11,7 +11,7 @@
     "test:unit": "node tests/e2e-harness.mjs --tier 1",
     "test:e2e": "node tests/e2e-harness.mjs",
     "test:challenger": "node tests/challenger-m1-empirical-tests.mjs && node tests/challenger-m1-dual-mode.mjs && node tests/challenger-m2-empirical-tests.mjs && node tests/challenger-m2-2-layout-typography.mjs",
-    "test:all": "node scripts/validate-issues.mjs && node tests/e2e-harness.mjs && node tests/reviewer-m1-stress-tests.mjs && node tests/challenger-m1-empirical-tests.mjs && node tests/challenger-m1-dual-mode.mjs && node tests/challenger-m1-2-empirical-tests.mjs && node tests/challenger-m2-empirical-tests.mjs && node tests/challenger-m2-1-empirical.mjs && node tests/challenger-m2-2-layout-typography.mjs && node --test tests/founding-date-regression.mjs && node --test tests/client-pdf-download.mjs && node --test tests/monthly-safety.mjs",
+    "test:all": "node scripts/validate-issues.mjs && node tests/e2e-harness.mjs && node tests/reviewer-m1-stress-tests.mjs && node tests/challenger-m1-empirical-tests.mjs && node tests/challenger-m1-dual-mode.mjs && node tests/challenger-m1-2-empirical-tests.mjs && node tests/challenger-m2-empirical-tests.mjs && node tests/challenger-m2-1-empirical.mjs && node tests/challenger-m2-2-layout-typography.mjs && node --test tests/founding-date-regression.mjs && node --test tests/client-pdf-download.mjs && node --test tests/monthly-safety.mjs && node --test tests/draft-storage-contract.mjs",
     "export-pdf": "node scripts/export-pdf.mjs --all",
     "export:pdf": "node scripts/export-pdf.mjs --all",
     "extract-photos": "python scripts/extract-curated-photos.py"
