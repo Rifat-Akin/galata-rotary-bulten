@@ -1174,7 +1174,8 @@ function setupReaderObserver() {
     }
   }, {
     // Phones scroll the document, whereas desktop uses the preview pane.
-    root: window.matchMedia('(max-width: 900px)').matches ? null : viewport,
+    root: (typeof window.matchMedia === 'function' &&
+      window.matchMedia('(max-width: 900px)').matches) ? null : viewport,
     threshold: 0.4
   });
 
