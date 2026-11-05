@@ -463,7 +463,7 @@ function syncModelFromForms() {
   // Missing controls (e.g. local-runtime/legacy test UIs) must not silently
   // erase the theme and bypass the corporate brand veto.
   const themeField = document.getElementById('inp-period-theme');
-  if (themeField) currentIssue.theme = themeField.value.trim();
+  if (themeField?.isConnected) currentIssue.theme = themeField.value.trim();
   const monthSpec = MONTH_ENTRIES.find(entry => entry[0] === currentIssue.month);
   if (monthSpec) {
     const start = monthSpec[2] >= 7 ? currentIssue.year : currentIssue.year - 1;
