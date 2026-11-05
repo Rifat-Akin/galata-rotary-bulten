@@ -1,5 +1,3 @@
-import {buildDraftPdf} from './pdf-download.js?v=20261105-pdf13';
-
 /**
  * Galata Rotary Bülten Stüdyosu — Official Interactive Studio Controller
  * Handles split-screen state sync, REST API communication, dynamic Bento switcher,
@@ -1397,6 +1395,9 @@ async function exportPdf() {
       // Snapshot the actual editor state. Building is independent of localStorage
       // capacity and never writes over previously accepted official PDF files.
       const snapshot = JSON.parse(JSON.stringify(currentIssue));
+      // Lazy import keeps legacy local-runtime test sandboxes compatible, and
+      // only loads the PDF generator when it is actually requested.
+      const {buildDraftPdf} = await import('./pdf-download.js?v=20261105-pdf13');
       const result = await buildDraftPdf(snapshot, globalThis.BulletinRenderer,
         (done,total) => markPdfExportBusy('PDF ' + done + '/' + total));
       if (JSON.stringify(currentIssue) !== JSON.stringify(snapshot)) {
