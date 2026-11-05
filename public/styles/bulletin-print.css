@@ -1435,3 +1435,8 @@ html, body {
   line-height: 1.49;
 }
 .article-card.story-feature:not(.compact) .bento-container { margin-top: 4mm; }
+
+/* Compact paired stories cannot grow taller; use color rather than spacing. */
+.article-card.story-feature.compact .article-title {
+  color: var(--color-rotary-blue);
+}
