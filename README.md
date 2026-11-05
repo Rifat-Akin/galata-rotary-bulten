@@ -27,7 +27,7 @@
 - **Kulüp Sekreteri**: Gökhan Alpertunga
 - **Kulüp Saymanı**: Burhan Tokgöz
 - **Bülten Komitesi**: Rifat Akın Kaplan, Özgür Kuddar, GDB Polat Özcan
-- **Kulüp Kuruluş / Charter**: 02.09.2003 / 27.01.2004
+- **Kulüp Kuruluş / Charter**: 03.09.2003 / 27.01.2004
 - **Olağan Toplantılar**: Her Pazartesi 19:30 | Grand Hyatt İstanbul Taksim & Zoom Hibrit
 
 ---
@@ -180,7 +180,7 @@ Yeni GitHub Actions akışı `pull_request` üzerinde güvenli ön denetim, `mai
 4. Yayın görevi ikili PDF dosyalarını GitHub `output/` klasörüne kaydeder (değişiklik varsa). Böylece repo ile canlı PDF ayrışmaz.
 5. `public/`, `data/` ve doğrulanmış `output/` GitHub Pages'e dağıtılır. Herhangi bir test veya yazma adımı başarısız olursa yayın durur.
 
-**Sınırlar ve editoryal kabul:** GitHub Pages statik olduğu için tarayıcıda yapılan değişiklikler otomatik olarak GitHub'a gönderilmez; `JSON İndir` ile editoryal PR oluşturulmalıdır. Yeni aylar ilk aşamada **taslaktır**, resmî sayı değildir. Metin/tarih doğruluğu, kulüp görevli onayları ve özellikle reşit olmayanların fotoğrafları için yayın izni kulübün editoryal sorumluluğundadır. Eylül verisindeki kuruluş tarihi (`02.09.2003`) ile anlatımdaki `23.09.2003` ifadesi belge sahibi tarafından netleştirilmeden otomatik değiştirilmez. Görsel marka hakları için `ASSETS_NOTICE.md` dosyasına bakınız.
+**Sınırlar ve editoryal kabul:** GitHub Pages statik olduğu için tarayıcıda yapılan değişiklikler otomatik olarak GitHub'a gönderilmez; `JSON İndir` ile editoryal PR oluşturulmalıdır. Yeni aylar ilk aşamada **taslaktır**, resmî sayı değildir. Metin/tarih doğruluğu, kulüp görevli onayları ve özellikle reşit olmayanların fotoğrafları için yayın izni kulübün editoryal sorumluluğundadır. Kuruluş tarihi, kulüp sahibinin 5 Kasım 2026 kaynak tercihiyle **1000. toplantı sunumunun 3. slaytı** esas alınarak `03.09.2003` olarak netleştirilmiştir; charter tarihi `27.01.2004` olarak korunmuştur. Önceki kayıtların kaynak farkı `docs/FOUNDING_DATE_RECONCILIATION_2026-11-02.md` belgesinde izlenebilir. Görsel marka hakları için `ASSETS_NOTICE.md` dosyasına bakınız.
 
 ---
 

@@ -52,7 +52,7 @@ export const VALID_SEPTEMBER_MOCK = {
     district: "UR 2420. Bölge",
     clubNo: "64336",
     charterDate: "27.01.2004",
-    foundationDate: "02.09.2003",
+    foundationDate: "03.09.2003",
     meeting: "Her Pazartesi 19:30 | Grand Hyatt İstanbul Taksim & Zoom"
   },
   officers: {

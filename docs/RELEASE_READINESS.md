@@ -55,9 +55,8 @@ sunucu erişimi, sessiz PDF kaybı ve hatalı senkronizasyon iddialarını kapat
   isterse indirdiği JSON ile editoryal PR açabilir.
 - Basit PDF imza testleri görsel QA yerine geçmez; ayrıca bağımsız
   PDF.js görüntü ve metin sayımından yararlanıldı.
-- Resmî kulüp içerik onayı, kuruluş tarihi uyuşmazlığı
-  (`02.09.2003` karşı `23.09.2003`) ve fotoğraf/rıza/telif
-  kanıtı ayrı **editoryal HOLD** konusudur; teknik CI bunları ispat etmez.
+- **Kuruluş tarihi HOLD kapatıldı (05.11.2026):** Kulüp sahibinin açık kaynak tercihi doğrultusunda `1000. toplantı.pptx` 3. slayttaki kuruluş tarihi `03.09.2003`, charter tarihi `27.01.2004` kabul edildi. Tarihsel çelişki `docs/FOUNDING_DATE_RECONCILIATION_2026-11-02.md` içinde korunur.
+- Resmî içerik, fotoğraf/rıza/telif kanıtı ayrı **editoryal HOLD** konusudur; teknik CI bunları ispat etmez.
 - Canlı dağıtım ancak güncel PR/main SHA, GitHub CI ve Pages URL
   read-back ile `PASS` kabul edilir.
 
