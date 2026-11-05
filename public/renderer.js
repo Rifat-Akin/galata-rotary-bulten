@@ -193,7 +193,7 @@ function renderCoverPage(issue, pageNum, totalPages, options) {
 
     <div class="cover-issue-ribbon">
       <div class="ribbon-month-year">${escapeHTML(issue.month || '').toUpperCase()} ${escapeHTML(issue.year || 2026)}</div>
-      <div class="ribbon-issue-badge">SAYI: ${escapeHTML(issue.issueNumber || 1)} • DÖNEM: ${escapeHTML(issue.rotaryYear || '2026-2027')}</div>
+      <div class="ribbon-issue-badge">SAYI: ${escapeHTML(issue.issueNumber || 1)} • DÖNEM: ${escapeHTML(displayRotaryYear(issue))}</div>
       <div class="ribbon-theme-tag">${escapeHTML(issue.rotaryMonthTheme || 'Aylık Bülten')}</div>
     </div>
 
@@ -217,15 +217,15 @@ function renderCoverPage(issue, pageNum, totalPages, options) {
         </div>
         <div class="kunye-officer-item">
           <span class="officer-role">Kulüp Dönem Başkanı</span>
-          <span class="officer-name">${escapeHTML(officers.president || 'Sevilay Aksel')}</span>
+          <span class="officer-name">${escapeHTML(officers.president || 'Dönem Başkanı')}</span>
         </div>
         <div class="kunye-officer-item">
           <span class="officer-role">Kulüp Dönem Sekreteri</span>
-          <span class="officer-name">${escapeHTML(officers.secretary || 'Gökhan Alpertunga')}</span>
+          <span class="officer-name">${escapeHTML(officers.secretary || 'Belirtilmedi')}</span>
         </div>
         <div class="kunye-officer-item">
           <span class="officer-role">Kulüp Dönem Saymanı</span>
-          <span class="officer-name">${escapeHTML(officers.treasurer || 'Burhan Tokgöz')}</span>
+          <span class="officer-name">${escapeHTML(officers.treasurer || 'Belirtilmedi')}</span>
         </div>
         <div class="kunye-officer-item" style="grid-column: span 3;">
           <span class="officer-role">Bülten Komitesi</span>
@@ -286,7 +286,7 @@ function renderCoverPage(issue, pageNum, totalPages, options) {
 function renderPresidentPage(issue, pageNum, totalPages, options) {
   const prefix = options.assetPrefix || '';
   const pres = issue.presidentMessage || {};
-  const presPhotoUrl = resolveUrl(pres.photo || 'assets/photos/2026-07/baskan_sevilay_aksel.jpg', prefix);
+  const presPhotoUrl = resolveUrl(pres.photo || (displayRotaryYear(issue) === '2026–2027' ? 'assets/photos/2026-07/baskan_sevilay_aksel.jpg' : 'assets/brand/rotary-masterbrand.svg'), prefix);
 
   // Split president body into paragraphs
   const paragraphs = (pres.body || '')
@@ -571,7 +571,7 @@ function renderCulturePage(issue, pageNum, totalPages, options) {
     announcementsHTML = safe.length ? safe.map(item => `
       <div class="announcement-box">
         <h4 class="announcement-box-title">${escapeHTML(item.title || 'Kulüp Duyurusu')}</h4>
-        <div class="announcement-box-content">${String(item.body || '').split(/\\n+/).filter(Boolean)
+        <div class="announcement-box-content">${String(item.body || '').split(/\n+/).filter(Boolean)
           .map(para => `<p>${escapeHTML(para)}</p>`).join('')}</div>
       </div>
     `).join('') : `
