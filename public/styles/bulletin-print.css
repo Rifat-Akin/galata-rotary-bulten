@@ -889,12 +889,20 @@ html, body {
   box-shadow: none;
 }
 .single-col .bento-img {
+  width: auto;
+  max-width: 100%;
   height: auto;
   max-height: 179mm;
   flex: 0 0 auto;
   object-fit: contain;
   object-position: center;
+  margin-inline: auto;
   background: transparent;
+}
+/* Two compact stories share one A4 sheet; their media budgets are half-sized.
+   Portrait photos must be scaled to the available card, not spill into the next. */
+.article-card.compact .single-col .bento-img {
+  max-height: 58mm;
 }
 .single-col .bento-caption {
   margin-top: 2mm;
