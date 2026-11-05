@@ -32,7 +32,7 @@ for (const issueMeta of catalog) {
     const html = renderIssueToHTML(issue, {fullDoc: true});
     const pages = html.match(/<article class="a4-page/g) || [];
     assert.equal(pages.length, issueMeta.pageCount, 'must preserve accepted official pagination');
-    assert.equal(html.includes('styles/bulletin-print.css?v=20261105-mobilepdf12'), true,
+    assert.equal(html.includes('styles/bulletin-print.css?v=20261105-editorial14'), true,
       'full-document print CSS must be cache-busted');
     assert.match(html, /class="culture-watermark"/,
       'culture pages must use a clear non-stretched decorative ending');
@@ -139,16 +139,16 @@ test('typography, culture features and cache version are designed for readable A
   assert.match(block('.announcement-box-content'), /font-size:\s*8\.8pt/);
   assert.match(block('.culture-page-grid .announcements-grid'), /flex:\s*0 0 auto/);
   assert.match(block('.culture-watermark img'), /object-fit:\s*contain/);
-  assert.match(studio, /styles\/bulletin-print\.css\?v=20261105-mobilepdf12/);
-  assert.match(studio, /styles\/studio\.css\?v=20261105-mobilepdf12/);
+  assert.match(studio, /styles\/bulletin-print\.css\?v=20261105-editorial14/);
+  assert.match(studio, /styles\/studio\.css\?v=20261105-editorial14/);
 });
 
 test('Pages uses cache-versioned modules and officially downloaded PDFs', () => {
   const controller = fs.readFileSync(path.join(root, 'public/studio.js'), 'utf8');
-  const tag = '20261105-mobilepdf12';
+  const tag = '20261105-editorial14';
   assert.ok(studio.includes('src="renderer.js?v=' + tag + '"'),
     'renderer module must bypass cached pre-release JavaScript');
-  assert.ok(studio.includes('src="studio.js?v=20261105-pdf13"'),
+  assert.ok(studio.includes('src="studio.js?v=20261105-editorial14"'),
     'editor controller must bypass cached pre-release JavaScript');
   assert.ok(controller.includes("const PUBLIC_RELEASE_TAG = '" + tag + "'"),
     'official PDF cache revision should match the visible JavaScript release');
