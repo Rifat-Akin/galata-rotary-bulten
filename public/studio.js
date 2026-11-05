@@ -22,7 +22,7 @@ let previousPdfBlobUrl = null;
 
 // Asset release token: PDF downloads must not reuse a stale browser cache
 // after a new GitHub Pages publish. Keep synced with the module URLs in index.html.
-const PUBLIC_RELEASE_TAG = '20261105-monthly15';
+const PUBLIC_RELEASE_TAG = '20261105-drafts16';
 
 // Official Pre-Rendered PDF Mapping
 const ISSUE_PDF_MAP = {
@@ -176,6 +176,101 @@ function showToast(message, type = 'info') {
   }, 4000);
 }
 
+// IndexedDB is the primary on-device store for large image-backed drafts.
+// A strictly verified fallback preserves older localStorage-only browsers.
+function readLegacyDraft(id) {
+  try {
+    const raw = localStorage.getItem('galata_issue_' + id);
+    if (!raw) return null;
+    const obj = JSON.parse(raw);
+    return obj?.id === id && Array.isArray(obj.articles) ? obj : null;
+  } catch (error) {
+    console.warn('Eski taslak okunamadı:', id, error.message);
+    return null;
+  }
+}
+
+async function readStoredDraft(id) {
+  const legacy = readLegacyDraft(id);
+  const db = globalThis.GalataDraftStore;
+  if (!db) return legacy;
+  try {
+    const record = await db.get(id);
+    if (record?.id === id && Array.isArray(record.articles)) return record;
+    if (legacy) {
+      // Migrating must be reversible: never delete a legacy copy until the
+      // IndexedDB write has been read back byte-for-byte.
+      await db.put(legacy);
+      const verified = await db.get(id);
+      if (JSON.stringify(verified) === JSON.stringify(legacy)) {
+        localStorage.removeItem('galata_issue_' + id);
+        localStorage.removeItem('galata_issue_timestamp_' + id);
+        return verified;
+      }
+    }
+  } catch (err) {
+    console.warn('IndexedDB taslağı okunamadı; eski taslak korunuyor:', err.message);
+  }
+  return legacy;
+}
+
+async function listStoredDrafts() {
+  const byId = new Map();
+  const db = globalThis.GalataDraftStore;
+  if (db) {
+    try {
+      for (const draft of await db.list()) {
+        if (draft?.id && Array.isArray(draft.articles)) byId.set(draft.id, draft);
+      }
+    } catch (err) {
+      console.warn('IndexedDB taslak listesi okunamadı:', err.message);
+    }
+  }
+  // Include unmigrated drafts from older versions; prefer verified DB data.
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (!key || !/^galata_issue_[0-9]{4}-[0-9]{2}-[a-z0-9-]+$/.test(key)) continue;
+    const id = key.slice('galata_issue_'.length);
+    if (!byId.has(id)) {
+      const item = readLegacyDraft(id);
+      if (item) byId.set(id, item);
+    }
+  }
+  return [...byId.values()];
+}
+
+async function saveStoredDraft(issue) {
+  const db = globalThis.GalataDraftStore;
+  if (db) {
+    try {
+      await db.put(issue);
+      const readBack = await db.get(issue.id);
+      if (JSON.stringify(readBack) !== JSON.stringify(issue)) {
+        throw new Error('Kaydedilen taslak geri okunamadı');
+      }
+      // Remove an older localStorage copy only after read-back succeeds.
+      localStorage.removeItem('galata_issue_' + issue.id);
+      localStorage.removeItem('galata_issue_timestamp_' + issue.id);
+      return 'indexeddb';
+    } catch (err) {
+      console.warn('IndexedDB yazma başarısız, localStorage deneniyor:', err.message);
+    }
+  }
+  localStorage.setItem('galata_issue_' + issue.id, JSON.stringify(issue, null, 2));
+  localStorage.setItem('galata_issue_timestamp_' + issue.id, new Date().toISOString());
+  return 'localstorage';
+}
+
+async function removeStoredDraft(id) {
+  const db = globalThis.GalataDraftStore;
+  if (db) {
+    await db.remove(id);
+    if (await db.get(id)) throw new Error('Taslak silinemedi; mevcut kayıt korundu.');
+  }
+  localStorage.removeItem('galata_issue_' + id);
+  localStorage.removeItem('galata_issue_timestamp_' + id);
+}
+
 /**
  * Resilient Issue List Loader:
  * Automatically probes environment, falls back to static catalog / hardcoded registry,
@@ -222,21 +317,15 @@ async function loadIssuesList(selectedId = null) {
     }
   }
 
+  let draftIds = new Set();
   if (activeRuntimeMode === 'static') {
-    // New local drafts survive a reload, but are never presented as published issues.
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (!key || !/^galata_issue_[0-9]{4}-[0-9]{2}-[a-z0-9-]+$/.test(key)) continue;
-      try {
-        const draft = JSON.parse(localStorage.getItem(key));
-        if (!draft || key !== 'galata_issue_' + draft.id ||
-            issues.some(existing => existing.id === draft.id)) continue;
-        issues.push({ id: draft.id, month: draft.month, year: draft.year,
-          issueNumber: draft.issueNumber, title: draft.month + ' ' + draft.year,
-          totalArticles: (draft.articles || []).length, localDraft: true });
-      } catch (err) {
-        console.warn('Geçersiz yerel taslak atlandı:', key, err.message);
-      }
+    const drafts = await listStoredDrafts();
+    draftIds = new Set(drafts.map(draft => draft.id));
+    for (const draft of drafts) {
+      if (issues.some(existing => existing.id === draft.id)) continue;
+      issues.push({ id: draft.id, month: draft.month, year: draft.year,
+        issueNumber: draft.issueNumber, title: draft.month + ' ' + draft.year,
+        totalArticles: draft.articles.length, localDraft: true });
     }
     issues.sort((a, b) => (a.issueNumber || 0) - (b.issueNumber || 0));
   }
@@ -250,7 +339,7 @@ async function loadIssuesList(selectedId = null) {
       const option = document.createElement('option');
       option.value = issue.id;
       // Mark if modified in localStorage
-      const hasLocalChanges = !!localStorage.getItem(`galata_issue_${issue.id}`);
+      const hasLocalChanges = draftIds.has(issue.id);
       option.textContent = `${issue.month} ${issue.year} (Sayı ${issue.issueNumber})${hasLocalChanges ? ' ✏️' : ''}`;
       selector.appendChild(option);
     });
@@ -280,19 +369,10 @@ async function selectIssue(issueId) {
     // Browser drafts are authoritative until successfully saved to the local API.
     // In particular, a previous offline PUT failure must not be hidden by a
     // later successful GET returning the older server copy.
-    const localDraft = localStorage.getItem(`galata_issue_${issueId}`);
+    const localDraft = await readStoredDraft(issueId);
     if (localDraft) {
-      try {
-        const parsed = JSON.parse(localDraft);
-        if (parsed && parsed.id === issueId && Array.isArray(parsed.articles)) {
-          issueData = parsed;
-          showToast('Tarayıcı taslağı kurtarıldı. Sunucu/GitHub henüz bu değişiklikleri içermeyebilir; JSON yedeği alıp kaydedin.', 'info');
-        } else {
-          console.warn('Taslak kimliği veya yapısı geçersiz:', issueId);
-        }
-      } catch (err) {
-        console.error('Tarayıcı taslağı okunamadı:', err.message);
-      }
+      issueData = localDraft;
+      showToast('Bu cihazda kayıtlı bülten taslağı geri açıldı. Başka cihaz için JSON yedeği alın.', 'info');
     }
 
     if (!issueData && activeRuntimeMode === 'local') {
@@ -1443,12 +1523,11 @@ async function saveCurrentIssue() {
   }
 
   try {
-    localStorage.setItem('galata_issue_' + currentIssue.id, JSON.stringify(currentIssue, null, 2));
-    localStorage.setItem('galata_issue_timestamp_' + currentIssue.id, new Date().toISOString());
+    const storage = await saveStoredDraft(currentIssue);
     hasUnsavedChanges = false;
     showToast(serverSaveFailed
-      ? 'Sunucuya kaydedilemedi! Yalnız tarayıcıda taslak var. JSON dosyasını indirin.'
-      : 'Tarayıcı taslağı kaydedildi. GitHub ve resmî PDF güncellenmedi.',
+      ? 'Sunucuya kaydedilemedi! Taslak yalnız bu cihazda korundu. JSON yedeği alın.'
+      : (storage === 'indexeddb' ? 'Bülten bu cihazın kalıcı taslak alanına kaydedildi.' : 'Bülten tarayıcı taslağına kaydedildi; JSON yedeği alın.'),
       serverSaveFailed ? 'error' : 'info');
     renderLivePreview();
     updateIssueSelectOption(currentIssue.id, true);
@@ -1522,7 +1601,7 @@ async function exportPdf() {
   if (!currentIssue || !currentIssue.id || pdfExportBusy) return;
 
   // Unedited archive documents retain their original vector PDF quality.
-  const draftExists = Boolean(localStorage.getItem('galata_issue_' + currentIssue.id));
+  const draftExists = Boolean(await readStoredDraft(currentIssue.id));
   const officialPdfName = ISSUE_PDF_MAP[currentIssue.id];
   if (activeRuntimeMode === 'static' && !hasUnsavedChanges && !draftExists && officialPdfName) {
     const a = document.createElement('a');
@@ -1681,7 +1760,7 @@ async function startNewIssue(payload) {
       throw new Error('Ay, yıl veya sayı numarası geçersiz.');
     }
     const id = year + '-' + String(month[2]).padStart(2, '0') + '-' + month[1];
-    if (availableIssues.some(issue => issue.id === id) || localStorage.getItem('galata_issue_' + id)) {
+    if (availableIssues.some(issue => issue.id === id) || await readStoredDraft(id)) {
       throw new Error('Bu aya ait bir bülten zaten mevcut: ' + id);
     }
     if (!currentIssue) throw new Error('Künye kopyalanabilecek mevcut sayı bulunamadı.');
@@ -1706,8 +1785,7 @@ async function startNewIssue(payload) {
         announcements: [],
         book: { title: '', author: '', cover: '', summary: '' } }
     };
-    localStorage.setItem('galata_issue_' + id, JSON.stringify(draft));
-    localStorage.setItem('galata_issue_timestamp_' + id, new Date().toISOString());
+    await saveStoredDraft(draft);
     closeNewIssueModal();
     await loadIssuesList(id);
     showToast('Yeni sayı bu cihazda taslak olarak açıldı. PDF İndir ile yayımlamadan dosya oluşturabilirsiniz.', 'info');
@@ -1870,13 +1948,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!currentIssue || !currentIssue.id) return;
     if (confirm(`"${currentIssue.month} ${currentIssue.year}" sayısının yerel değişiklikleri silinip orijinal versiyonuna dönülsün mü?`)) {
       // Automatic recovery download before deleting a browser-only draft.
-      const existingDraft = localStorage.getItem('galata_issue_' + currentIssue.id);
+      const existingDraft = await readStoredDraft(currentIssue.id);
       if (existingDraft) {
-        try { downloadJSON(JSON.parse(existingDraft), currentIssue.id + '-silinmeden-once-yedek.json'); }
+        try { downloadJSON(existingDraft, currentIssue.id + '-silinmeden-once-yedek.json'); }
         catch (err) { showToast('Taslak yedeklenemedi: ' + err.message, 'error'); return; }
       }
-      localStorage.removeItem(`galata_issue_${currentIssue.id}`);
-      localStorage.removeItem(`galata_issue_timestamp_${currentIssue.id}`);
+      try { await removeStoredDraft(currentIssue.id); }
+      catch (err) { showToast('Taslak silinemedi: ' + err.message, 'error'); return; }
       showToast('Yerel değişiklikler temizlendi, orijinal bülten yükleniyor...', 'info');
       await selectIssue(currentIssue.id);
       await loadIssuesList(currentIssue.id);
