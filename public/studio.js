@@ -1305,6 +1305,22 @@ function downloadJSON(data, filename) {
  * Validates corporate rules prior to persistence (Turkish-resilient regex)
  */
 function validateIssueBeforeSave(data) {
+  // Never offer a corrupt A4 export for a gallery that cannot fit one page.
+  for (const [index, art] of (data?.articles || []).entries()) {
+    const photos = Array.isArray(art.photos) ? art.photos : [];
+    if (photos.length > 4) {
+      throw new Error(`Haber ${index + 1}: Bir sayfada en fazla dört fotoğraf; kalanları ayrı habere ayırın.`);
+    }
+    if (art.leadPhotoIndex !== undefined && (
+      !Number.isInteger(art.leadPhotoIndex) || art.leadPhotoIndex < 0 ||
+      art.leadPhotoIndex >= photos.length
+    )) {
+      throw new Error(`Haber ${index + 1}: Ana görsel seçimi geçersiz.`);
+    }
+    if (art.storyStyle !== undefined && !['standard', 'feature'].includes(art.storyStyle)) {
+      throw new Error(`Haber ${index + 1}: Sunum biçimi geçersiz.`);
+    }
+  }
   const serialized = JSON.stringify(data);
   if (FORBIDDEN_THEME_REGEX.test(serialized) || hasForbiddenBrandDeep(data)) {
     throw new Error('Kurumsal Kimlik İhlali: "Rotary Sihri" ifadesi kesinlikle kullanılamaz! Tema "KALICI ETKİ YARAT" olmalıdır.');
