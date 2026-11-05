@@ -1440,3 +1440,16 @@ html, body {
 .article-card.story-feature.compact .article-title {
   color: var(--color-rotary-blue);
 }
+
+/* Theme label in future years must not display last year's branded emblem. */
+.masthead-theme-placeholder {
+  max-width: 48mm;
+  min-width: 30mm;
+  padding: 4mm 3mm;
+  border: 1px solid #c9d4df;
+  color: #23456b;
+  text-align: center;
+  font-size: 9pt;
+  font-weight: 700;
+  line-height: 1.3;
+}
