@@ -727,6 +727,57 @@ async function runEmpiricalChallengeSuite() {
           JSON.stringify(phone));
       }
 
+      // Regression for iPhone: fixed full-height workspace + root overflow:hidden
+      // previously hid all fields below the first viewport with no touch path.
+      const editorTouchScroll = await session.eval(`(() => {
+        document.querySelector('.tab-btn[data-tab="tab-articles"]').click();
+        const root = document.scrollingElement;
+        const content = document.querySelector('.editor-scroll-area');
+        root.scrollTop = 999999;
+        const result = {
+          rootOverflow: getComputedStyle(document.documentElement).overflowY,
+          rootTop: root.scrollTop,
+          rootHeight: root.scrollHeight,
+          viewportHeight: window.innerHeight,
+          allContentInDocument: root.scrollHeight > window.innerHeight + 400,
+          bottomReachable: root.scrollTop + window.innerHeight >= root.scrollHeight - 2,
+          editorOverflow: getComputedStyle(content).overflowY,
+          pageWidth: document.documentElement.scrollWidth
+        };
+        root.scrollTop = 0;
+        return result;
+      })()`);
+      assert('Mobile article editor scrolls to all fields with the document root',
+        editorTouchScroll?.rootOverflow === 'auto' &&
+        editorTouchScroll?.rootTop > 100 &&
+        editorTouchScroll?.allContentInDocument &&
+        editorTouchScroll?.bottomReachable &&
+        editorTouchScroll?.pageWidth <= 376, JSON.stringify(editorTouchScroll));
+
+      const readerTouchScroll = await session.eval(`(() => {
+        document.getElementById('btn-mode-reader').click();
+        const root = document.scrollingElement;
+        root.scrollTop = 999999;
+        const result = {
+          reader: document.body.classList.contains('mode-reader-active'),
+          rootTop: root.scrollTop,
+          rootHeight: root.scrollHeight,
+          bottomReachable: root.scrollTop + window.innerHeight >= root.scrollHeight - 2,
+          horizontalPan: getComputedStyle(document.getElementById('preview-viewport')).overflowX,
+          pageCount: document.querySelectorAll('.a4-page').length
+        };
+        root.scrollTop = 0;
+        document.getElementById('btn-mode-editor').click();
+        document.querySelector('.tab-btn[data-tab="tab-cover"]').click();
+        return result;
+      })()`);
+      assert('Mobile reader can vertically scroll all PDF pages without nested scroll lock',
+        readerTouchScroll?.reader === true &&
+        readerTouchScroll?.rootTop > 100 &&
+        readerTouchScroll?.bottomReachable &&
+        readerTouchScroll?.pageCount >= 8 &&
+        readerTouchScroll?.horizontalPan === 'auto', JSON.stringify(readerTouchScroll));
+
       // Real interactive affordance audit, after the 375px viewport probe.
       const realUi = await session.eval(`(() => {
         const bar = document.querySelector('.studio-header-actions');
