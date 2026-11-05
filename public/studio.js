@@ -9,6 +9,8 @@ let currentIssue = null;
 let hasUnsavedChanges = false;
 let availableIssues = [];
 let renderDebounceTimer = null;
+let draftAutoSaveTimer = null;
+let draftAutoSaveGeneration = 0;
 let currentZoom = 0.75; // Default 75% zoom
 let isFitMode = true;
 let activeRuntimeMode = 'local'; // 'local' or 'static'
@@ -362,6 +364,8 @@ async function loadIssuesList(selectedId = null) {
  * In static mode: checks localStorage first, then fetches data/issues/${id}.json.
  */
 async function selectIssue(issueId) {
+  clearTimeout(draftAutoSaveTimer);
+  ++draftAutoSaveGeneration;
   invalidatePdfReadyLink();
   try {
     let issueData = null;
@@ -1074,6 +1078,26 @@ function queuePreviewRender() {
   syncModelFromForms();
   if (renderDebounceTimer) clearTimeout(renderDebounceTimer);
   renderDebounceTimer = setTimeout(renderLivePreview, 120);
+  if (activeRuntimeMode === 'static' && currentIssue?.id) {
+    clearTimeout(draftAutoSaveTimer);
+    const generation = ++draftAutoSaveGeneration;
+    const snapshot = JSON.parse(JSON.stringify(currentIssue));
+    draftAutoSaveTimer = setTimeout(async () => {
+      if (generation !== draftAutoSaveGeneration || currentIssue?.id !== snapshot.id) return;
+      try {
+        validateIssueBeforeSave(snapshot);
+        await saveStoredDraft(snapshot);
+        if (generation === draftAutoSaveGeneration &&
+            JSON.stringify(currentIssue) === JSON.stringify(snapshot)) {
+          hasUnsavedChanges = false;
+          updateIssueSelectOption(snapshot.id, true);
+        }
+      } catch (err) {
+        showToast('Otomatik taslak kaydedilemedi: ' + err.message +
+          '. JSON İndir ile yedek alın.', 'error');
+      }
+    }, 2400);
+  }
 }
 
 /**
@@ -1522,6 +1546,8 @@ function validateIssueBeforeSave(data) {
  */
 async function saveCurrentIssue() {
   if (!currentIssue || !currentIssue.id) return null;
+  clearTimeout(draftAutoSaveTimer);
+  ++draftAutoSaveGeneration;
   syncModelFromForms();
   try {
     validateIssueBeforeSave(currentIssue);
@@ -2049,6 +2075,8 @@ document.addEventListener('DOMContentLoaded', () => {
         try { downloadJSON(existingDraft, currentIssue.id + '-silinmeden-once-yedek.json'); }
         catch (err) { showToast('Taslak yedeklenemedi: ' + err.message, 'error'); return; }
       }
+      clearTimeout(draftAutoSaveTimer);
+      ++draftAutoSaveGeneration;
       try { await removeStoredDraft(currentIssue.id); }
       catch (err) { showToast('Taslak silinemedi: ' + err.message, 'error'); return; }
       showToast('Yerel değişiklikler temizlendi, orijinal bülten yükleniyor...', 'info');
