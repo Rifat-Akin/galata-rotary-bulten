@@ -1723,10 +1723,62 @@ async function syncWithRotaClub() {
  * Converts a File object into a Base64 Data URL (used in static mode and offline)
  */
 function readImageAsDataUrl(file) {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     if (!/^image\/(?:jpeg|png|webp)$/.test(file.type) || file.size > 6 * 1024 * 1024) {
-      return reject(new Error('Lütfen geçerli bir görsel dosyası seçin (JPEG, PNG, WebP, en çok 6 MiB).'));
+      reject(new Error('Lütfen JPEG, PNG veya WebP fotoğraf seçin (en çok 6 MiB).'));
+      return;
     }
+    // Optimize only user-uploaded images. Local/archived source files are never
+    // overwritten, and the original on the user's device remains untouched.
+    if (typeof createImageBitmap === 'function' && typeof Blob !== 'undefined' &&
+        file instanceof Blob && typeof document?.createElement === 'function') {
+      let bitmap = null, canvas = null;
+      try {
+        bitmap = await createImageBitmap(file);
+        const pixels = bitmap.width * bitmap.height;
+        if (!pixels || pixels > 40_000_000) {
+          throw new Error('Fotoğraf piksel boyutu çok büyük (en fazla 40 MP).');
+        }
+        if (file.size >= 350 * 1024 || Math.max(bitmap.width, bitmap.height) > 1920) {
+          const scale = Math.min(1, 1920 / Math.max(bitmap.width, bitmap.height));
+          canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+          canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+          const context = canvas.getContext('2d', {alpha:true});
+          if (!context) throw new Error('Fotoğraf işleme desteği yok.');
+          context.imageSmoothingEnabled = true;
+          context.imageSmoothingQuality = 'high';
+          context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+          let compressed = canvas.toDataURL('image/webp', 0.84);
+          if (!compressed.startsWith('data:image/webp;base64,')) {
+            // Unavailable WebP encoder: use a white-backed, high-quality JPEG.
+            context.globalCompositeOperation = 'destination-over';
+            context.fillStyle = '#fff';
+            context.fillRect(0, 0, canvas.width, canvas.height);
+            compressed = canvas.toDataURL('image/jpeg', 0.87);
+          }
+          if (compressed.length > 2_600_000) {
+            compressed = canvas.toDataURL('image/webp', 0.72);
+          }
+          if (compressed.length > 2_600_000) {
+            throw new Error('Fotoğraf PDF için hâlâ büyük. Daha küçük boyutlu dosya seçin.');
+          }
+          resolve(compressed);
+          return;
+        }
+      } catch (error) {
+        if (/çok büyük|hâlâ büyük/.test(error.message)) {
+          reject(error);
+          return;
+        }
+        console.warn('Fotoğraf optimizasyonu atlandı; kaynak biçimi deneniyor:',error.message);
+      } finally {
+        bitmap?.close?.();
+        if (canvas) { canvas.width = 1; canvas.height = 1; }
+      }
+    }
+    // Compatibility path for browsers without canvas/bitmap APIs and for
+    // existing local-mode test harnesses; IndexedDB can store these data URLs.
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result);
     reader.onerror = () => reject(new Error('Görsel dosyası okunamadı.'));
