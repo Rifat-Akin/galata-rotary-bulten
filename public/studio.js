@@ -275,6 +275,7 @@ async function loadIssuesList(selectedId = null) {
  * In static mode: checks localStorage first, then fetches data/issues/${id}.json.
  */
 async function selectIssue(issueId) {
+  invalidatePdfReadyLink();
   try {
     let issueData = null;
 
@@ -859,6 +860,7 @@ function escapeAttr(str) {
  * Triggers live A4 preview rendering with debouncing
  */
 function queuePreviewRender() {
+  invalidatePdfReadyLink();
   hasUnsavedChanges = true;
   syncModelFromForms();
   if (renderDebounceTimer) clearTimeout(renderDebounceTimer);
@@ -1326,6 +1328,18 @@ function printCurrentIssue() {
   window.print();
 }
 
+function invalidatePdfReadyLink() {
+  const link = document.getElementById('pdf-download-ready');
+  if (link) {
+    link.hidden = true;
+    link.removeAttribute('href');
+  }
+  if (previousPdfBlobUrl) {
+    URL.revokeObjectURL(previousPdfBlobUrl);
+    previousPdfBlobUrl = null;
+  }
+}
+
 function markPdfExportBusy(progressLabel = null) {
   const button = document.getElementById('btn-export-pdf');
   if (!button) return;
@@ -1385,6 +1399,9 @@ async function exportPdf() {
       const snapshot = JSON.parse(JSON.stringify(currentIssue));
       const result = await buildDraftPdf(snapshot, globalThis.BulletinRenderer,
         (done,total) => markPdfExportBusy('PDF ' + done + '/' + total));
+      if (JSON.stringify(currentIssue) !== JSON.stringify(snapshot)) {
+        throw new Error('PDF hazırlanırken içerik değişti. Lütfen tekrar PDF İndir deyin.');
+      }
       offerGeneratedPdf(result);
       showToast('Güncel PDF hazır. İndirme açılmazsa “Hazır PDF · İndir” bağlantısına dokunun. Yayımlanmadı.', 'success');
     } catch (err) {
