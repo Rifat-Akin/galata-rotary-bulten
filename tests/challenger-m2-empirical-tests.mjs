@@ -526,7 +526,8 @@ async function runAllChallengerM2Tests() {
     const pages5 = (html5Arts.match(/class="[^"]*a4-page/g) || []).length;
     testAssert('5 articles yields exactly 9 pages', pages5 === 9);
 
-    // Case E: 8 articles with generic grouping fallback
+    // Case E: 8 articles must not be truncated merely to fit 7–9 pages.
+    // New issues may have 12 A4 pages (8 articles + 4 fixed pages).
     const issue8Arts = JSON.parse(JSON.stringify(baselineIssue));
     issue8Arts.id = 'generic-8';
     issue8Arts.articles = [
@@ -536,8 +537,8 @@ async function runAllChallengerM2Tests() {
     const html8Arts = renderIssueToHTML(issue8Arts);
     const pages8 = (html8Arts.match(/class="[^"]*a4-page/g) || []).length;
     testAssert(
-      `8 articles grouped to remain within 7–9 page range (got ${pages8} pages)`,
-      pages8 >= 7 && pages8 <= 9,
+      `8 articles get their own 8 pages instead of being silently dropped (got ${pages8})`,
+      pages8 === 12,
       `Got ${pages8} pages`
     );
   }

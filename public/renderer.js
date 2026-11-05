@@ -90,6 +90,25 @@ function resolveUrl(url, prefix = '') {
   return escapeHTML(resolved);
 }
 
+function displayRotaryYear(issue) {
+  const raw = String(issue?.rotaryYear || '').trim().replace(/[–—]/g, '-');
+  if (/^(20[0-9]{2})-(20[0-9]{2})$/.test(raw)) {
+    const [start, end] = raw.split('-').map(Number);
+    if (end === start + 1) return start + '–' + end;
+  }
+  const year = Number(issue?.year) || 2026;
+  const month = String(issue?.month || '').toLocaleLowerCase('tr-TR');
+  const secondHalf = ['temmuz','ağustos','eylül','ekim','kasım','aralık'].includes(month);
+  const start = secondHalf ? year : year - 1;
+  return start + '–' + (start + 1);
+}
+function displayPeriodTheme(issue) {
+  const theme = String(issue?.theme || '').trim();
+  if (theme) return theme;
+  return displayRotaryYear(issue) === '2026–2027'
+    ? 'KALICI ETKİ YARAT' : 'Dönem teması belirtilmedi';
+}
+
 /**
  * Helper to build running page header
  */
@@ -113,7 +132,7 @@ function renderPageHeader(issue, pageCategory = 'KULÜPTEN HABERLER') {
 function renderPageFooter(issue, pageNum, totalPages) {
   return `
     <footer class="page-footer">
-      <span class="page-footer-theme">DÖNEM TEMASI: ${escapeHTML(issue.theme || 'KALICI ETKİ YARAT')}</span>
+      <span class="page-footer-theme">DÖNEM TEMASI: ${escapeHTML(displayPeriodTheme(issue))}</span>
       <span class="page-footer-center">${escapeHTML(issue.club?.district || 'UR 2420. Bölge')}</span>
       <span class="page-footer-page-num">Sayfa ${pageNum} / ${totalPages}</span>
     </footer>
@@ -167,44 +186,46 @@ function renderCoverPage(issue, pageNum, totalPages, options) {
           <span class="masthead-district-badge">${escapeHTML(club.district || 'UR 2420. Bölge')} • Kulüp No: ${escapeHTML(club.clubNo || '64336')}</span>
         </div>
       </div>
-      <img src="${themeLogoUrl}" alt="Kalıcı Etki Yarat 2026-2027" class="masthead-theme-logo" onerror="this.style.display='none'" />
+      ${displayRotaryYear(issue) === '2026–2027' && displayPeriodTheme(issue) === 'KALICI ETKİ YARAT'
+        ? `<img src="${themeLogoUrl}" alt="Kalıcı Etki Yarat 2026-2027" class="masthead-theme-logo" onerror="this.style.display='none'" />`
+        : `<div class="masthead-theme-placeholder">${escapeHTML(displayPeriodTheme(issue))}</div>`}
     </div>
 
     <div class="cover-issue-ribbon">
       <div class="ribbon-month-year">${escapeHTML(issue.month || '').toUpperCase()} ${escapeHTML(issue.year || 2026)}</div>
-      <div class="ribbon-issue-badge">SAYI: ${escapeHTML(issue.issueNumber || 1)} • DÖNEM: ${escapeHTML(issue.rotaryYear || '2026-2027')}</div>
+      <div class="ribbon-issue-badge">SAYI: ${escapeHTML(issue.issueNumber || 1)} • DÖNEM: ${escapeHTML(displayRotaryYear(issue))}</div>
       <div class="ribbon-theme-tag">${escapeHTML(issue.rotaryMonthTheme || 'Aylık Bülten')}</div>
     </div>
 
     <section class="kunye-box">
       <div class="kunye-title">
         <span>GALATA ROTARY KULÜBÜ RESMİ KÜNYESİ</span>
-        <span>2026–2027 DÖNEMİ</span>
+        <span>${escapeHTML(displayRotaryYear(issue))} DÖNEMİ</span>
       </div>
       <div class="kunye-officers-grid">
         <div class="kunye-officer-item">
           <span class="officer-role">UR Başkanı</span>
-          <span class="officer-name">${escapeHTML(officers.riPresident || 'Olayinka Hakeem Babalola')}</span>
+          <span class="officer-name">${escapeHTML(officers.riPresident || 'Belirtilmedi')}</span>
         </div>
         <div class="kunye-officer-item">
           <span class="officer-role">2420. Bölge Guvernörü</span>
-          <span class="officer-name">${escapeHTML(officers.districtGovernor || 'Erden Gökmen')}</span>
+          <span class="officer-name">${escapeHTML(officers.districtGovernor || 'Belirtilmedi')}</span>
         </div>
         <div class="kunye-officer-item">
           <span class="officer-role">Guvernör Yardımcısı</span>
-          <span class="officer-name">${escapeHTML(officers.assistantGovernor || 'İhsan Ercan')}</span>
+          <span class="officer-name">${escapeHTML(officers.assistantGovernor || 'Belirtilmedi')}</span>
         </div>
         <div class="kunye-officer-item">
           <span class="officer-role">Kulüp Dönem Başkanı</span>
-          <span class="officer-name">${escapeHTML(officers.president || 'Sevilay Aksel')}</span>
+          <span class="officer-name">${escapeHTML(officers.president || 'Dönem Başkanı')}</span>
         </div>
         <div class="kunye-officer-item">
           <span class="officer-role">Kulüp Dönem Sekreteri</span>
-          <span class="officer-name">${escapeHTML(officers.secretary || 'Gökhan Alpertunga')}</span>
+          <span class="officer-name">${escapeHTML(officers.secretary || 'Belirtilmedi')}</span>
         </div>
         <div class="kunye-officer-item">
           <span class="officer-role">Kulüp Dönem Saymanı</span>
-          <span class="officer-name">${escapeHTML(officers.treasurer || 'Burhan Tokgöz')}</span>
+          <span class="officer-name">${escapeHTML(officers.treasurer || 'Belirtilmedi')}</span>
         </div>
         <div class="kunye-officer-item" style="grid-column: span 3;">
           <span class="officer-role">Bülten Komitesi</span>
@@ -265,7 +286,7 @@ function renderCoverPage(issue, pageNum, totalPages, options) {
 function renderPresidentPage(issue, pageNum, totalPages, options) {
   const prefix = options.assetPrefix || '';
   const pres = issue.presidentMessage || {};
-  const presPhotoUrl = resolveUrl(pres.photo || 'assets/photos/2026-07/baskan_sevilay_aksel.jpg', prefix);
+  const presPhotoUrl = resolveUrl(pres.photo || (displayRotaryYear(issue) === '2026–2027' ? 'assets/photos/2026-07/baskan_sevilay_aksel.jpg' : 'assets/brand/rotary-masterbrand.svg'), prefix);
 
   // Split president body into paragraphs
   const paragraphs = (pres.body || '')
@@ -289,10 +310,10 @@ function renderPresidentPage(issue, pageNum, totalPages, options) {
           </div>
 
           <div class="president-portrait-wrap">
-            <img src="${presPhotoUrl}" alt="Sevilay Aksel" class="president-portrait-img" onerror="this.src='${resolveUrl('assets/brand/rotary-logo.svg', prefix)}'" />
+            <img src="${presPhotoUrl}" alt="${escapeHTML(issue.officers?.president || 'Dönem Başkanı')}" class="president-portrait-img" onerror="this.src='${resolveUrl('assets/brand/rotary-logo.svg', prefix)}'" />
             <div class="president-portrait-meta">
-              <span class="president-name-bold">Sevilay Aksel</span>
-              <span class="president-title-sub">Galata Rotary Kulübü Dönem Başkanı (2026–2027)</span>
+              <span class="president-name-bold">${escapeHTML(issue.officers?.president || 'Dönem Başkanı')}</span>
+              <span class="president-title-sub">Galata Rotary Kulübü Dönem Başkanı (${escapeHTML(displayRotaryYear(issue))})</span>
               <span class="president-quote-badge">"Kalıcı Etki Yaratmak İçin Birlikteyiz"</span>
             </div>
           </div>
@@ -302,8 +323,8 @@ function renderPresidentPage(issue, pageNum, totalPages, options) {
           </div>
 
           <div class="president-signature-block">
-            <span class="president-sig-name">Sevilay Aksel</span>
-            <span class="president-sig-role">Galata Rotary Kulübü Dönem Başkanı 2026–2027</span>
+            <span class="president-sig-name">${escapeHTML(issue.officers?.president || 'Dönem Başkanı')}</span>
+            <span class="president-sig-role">Galata Rotary Kulübü Dönem Başkanı ${escapeHTML(displayRotaryYear(issue))}</span>
           </div>
         </section>
 
@@ -311,7 +332,7 @@ function renderPresidentPage(issue, pageNum, totalPages, options) {
         <aside class="calendar-col">
           <div class="calendar-header">
             <h3 class="calendar-title-main">Rotary Tanımlanmış Ayları</h3>
-            <span class="calendar-year-sub">2026–2027 DÖNEMİ</span>
+            <span class="calendar-year-sub">${escapeHTML(displayRotaryYear(issue))} DÖNEMİ</span>
           </div>
 
           <div class="calendar-months-list">
@@ -469,8 +490,9 @@ function renderCulturePage(issue, pageNum, totalPages, options) {
   // Context-aware announcements based on month
   let announcementsHTML = '';
   const m = (issue.month || '').toLowerCase();
+  const hasCustomAnnouncements = Array.isArray(culture.announcements);
 
-  if (m === 'temmuz') {
+  if (!hasCustomAnnouncements && issue.id === '2026-07-temmuz') {
     announcementsHTML = `
       <div class="announcement-box">
         <h4 class="announcement-box-title">Bölgeden Duyurular</h4>
@@ -487,7 +509,7 @@ function renderCulturePage(issue, pageNum, totalPages, options) {
         </div>
       </div>
     `;
-  } else if (m === 'ağustos') {
+  } else if (!hasCustomAnnouncements && issue.id === '2026-08-agustos') {
     announcementsHTML = `
       <div class="announcement-box">
         <h4 class="announcement-box-title">Bölge & Kulüplerarası Dayanışma</h4>
@@ -504,7 +526,7 @@ function renderCulturePage(issue, pageNum, totalPages, options) {
         </div>
       </div>
     `;
-  } else if (m === 'eylül') {
+  } else if (!hasCustomAnnouncements && issue.id === '2026-09-eylul') {
     announcementsHTML = `
       <div class="announcement-box">
         <h4 class="announcement-box-title">21 Eylül Dünya Barış Günü</h4>
@@ -522,8 +544,8 @@ function renderCulturePage(issue, pageNum, totalPages, options) {
         </div>
       </div>
     `;
-  } else {
-    // Ekim
+  } else if (!hasCustomAnnouncements && issue.id === '2026-10-ekim') {
+    // Keep the accepted 2026 October archival copy unchanged.
     announcementsHTML = `
       <div class="announcement-box">
         <h4 class="announcement-box-title">Dünya Çocuk Felci Günü Çağrısı</h4>
@@ -541,6 +563,22 @@ function renderCulturePage(issue, pageNum, totalPages, options) {
         </div>
       </div>
     `;
+  } else {
+    // User-owned monthly data. New months must never inherit last October's
+    // fixed names, birthdays, dates or announcements.
+    const entries = hasCustomAnnouncements ? culture.announcements : [];
+    const safe = entries.filter(item => item && (String(item.title || '').trim() || String(item.body || '').trim()));
+    announcementsHTML = safe.length ? safe.map(item => `
+      <div class="announcement-box">
+        <h4 class="announcement-box-title">${escapeHTML(item.title || 'Kulüp Duyurusu')}</h4>
+        <div class="announcement-box-content">${String(item.body || '').split(/\n+/).filter(Boolean)
+          .map(para => `<p>${escapeHTML(para)}</p>`).join('')}</div>
+      </div>
+    `).join('') : `
+      <div class="announcement-box">
+        <h4 class="announcement-box-title">Bu Ayın Duyuruları</h4>
+        <div class="announcement-box-content"><p>Henüz duyuru eklenmedi.</p></div>
+      </div>`;
   }
 
   return `
@@ -610,7 +648,7 @@ function renderBackCoverPage(issue, pageNum, totalPages, options) {
         ${escapeHTML(issue.club?.name || 'Galata Rotary Kulübü')} • Kulüp No: ${escapeHTML(issue.club?.clubNo || '64336')} • Charter: ${escapeHTML(issue.club?.charterDate || '27.01.2004')}
       </div>
       <div class="backcover-theme-motto">
-        2026–2027 DÖNEMİ: ${escapeHTML(issue.theme || 'KALICI ETKİ YARAT')}
+        ${escapeHTML(displayRotaryYear(issue))} DÖNEMİ: ${escapeHTML(displayPeriodTheme(issue))}
       </div>
     </footer>
   </article>
@@ -620,72 +658,25 @@ function renderBackCoverPage(issue, pageNum, totalPages, options) {
 /**
  * Smart Article Paginator: groups articles to guarantee strict 7–9 A4 pages
  */
-function paginateArticles(issue) {
-  const articles = issue.articles || [];
-  const id = (issue.id || '').toLowerCase();
+export function paginateArticles(issue) {
+  const articles = Array.isArray(issue?.articles) ? issue.articles : [];
+  const id = String(issue?.id || '').toLowerCase();
 
-  // Curated layout assignments for the 4 official 2026-2027 issues
-  if (id.includes('temmuz')) {
-    // 4 articles -> 4 separate pages (Total: 1 cover + 1 pres + 4 arts + 1 culture + 1 polio = 8 pages)
-    return articles.map(a => [a]);
+  // Reproduce the editorially verified layouts only for the *exact* source
+  // editions. A month name alone must not pin future years to old pagination.
+  if (id === '2026-08-agustos' && articles.length === 5) {
+    return [[articles[0]], [articles[1]], [articles[2], articles[3]], [articles[4]]];
+  }
+  if (id === '2026-10-ekim' && articles.length === 6) {
+    return [[articles[0]], [articles[1]], [articles[2]], [articles[3]],
+      [articles[4], articles[5]]];
   }
 
-  if (id.includes('agustos') || id.includes('ağustos')) {
-    // 5 articles: art3 and art4 are compact single-col articles that fit on 1 shared page
-    // (Total: 1 cover + 1 pres + 4 art pages + 1 culture + 1 polio = 8 pages)
-    if (articles.length >= 5) {
-      return [
-        [articles[0]],
-        [articles[1]],
-        [articles[2], articles[3]],
-        [articles[4]]
-      ];
-    }
-  }
-
-  if (id.includes('eylul') || id.includes('eylül')) {
-    // 5 articles: 5 dedicated pages (Total: 1 cover + 1 pres + 5 arts + 1 culture + 1 polio = 9 pages)
-    return articles.map(a => [a]);
-  }
-
-  if (id.includes('ekim')) {
-    // 6 articles: art5 and art6 share 1 page
-    // (Total: 1 cover + 1 pres + 5 art pages + 1 culture + 1 polio = 9 pages)
-    if (articles.length >= 6) {
-      return [
-        [articles[0]],
-        [articles[1]],
-        [articles[2]],
-        [articles[3]],
-        [articles[4], articles[5]]
-      ];
-    }
-  }
-
-  // Generic fallback for any arbitrary issue:
-  // Target 3 to 5 article pages so total pages is 7 to 9
-  if (articles.length <= 4) {
-    return articles.map(a => [a]);
-  } else if (articles.length === 5) {
-    return articles.map(a => [a]); // 9 pages total
-  } else {
-    // 6 or more articles: group consecutive pairs where appropriate
-    const pages = [];
-    let i = 0;
-    while (i < articles.length) {
-      // If we have more articles than remaining slots to keep under 5 pages
-      const remainingSlots = 5 - pages.length;
-      const remainingArticles = articles.length - i;
-      if (remainingArticles > remainingSlots && i + 1 < articles.length) {
-        pages.push([articles[i], articles[i + 1]]);
-        i += 2;
-      } else {
-        pages.push([articles[i]]);
-        i += 1;
-      }
-    }
-    return pages;
-  }
+  // For every newly created or edited issue, give each story its own page.
+  // This intentionally allows >9 pages: never discard additional stories or
+  // squeeze unreviewed photos into an unverified half-page layout.
+  // A4 overflow is checked independently before a PDF may be downloaded.
+  return articles.map(article => [article]);
 }
 
 /**
@@ -736,7 +727,7 @@ export function renderIssueToHTML(issue, options = {}) {
   }
 
   const docTitle = options.title || `Galata Rotary Kulübü Bülteni - ${issue.month || ''} ${issue.year || 2026} (Sayı ${issue.issueNumber || 1})`;
-  const printCssUrl = resolveUrl('styles/bulletin-print.css?v=20261105-editorial14', prefix);
+  const printCssUrl = resolveUrl('styles/bulletin-print.css?v=20261105-monthly15', prefix);
 
   return `<!DOCTYPE html>
 <html lang="tr">
