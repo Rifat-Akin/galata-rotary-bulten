@@ -1,3 +1,5 @@
+import {buildDraftPdf} from './pdf-download.js?v=20261105-pdf13';
+
 /**
  * Galata Rotary Bülten Stüdyosu — Official Interactive Studio Controller
  * Handles split-screen state sync, REST API communication, dynamic Bento switcher,
@@ -17,6 +19,8 @@ let readerPageObserver = null;
 let isNavigating = false;
 let navigationTimer = null;
 let overflowCycleIndex = 0;
+let pdfExportBusy = false;
+let previousPdfBlobUrl = null;
 
 // Asset release token: PDF downloads must not reuse a stale browser cache
 // after a new GitHub Pages publish. Keep synced with the module URLs in index.html.
@@ -1311,8 +1315,9 @@ function updateIssueSelectOption(issueId, isModified) {
 /**
  * Dual-Mode PDF Export:
  * - Local Mode: Calls POST /api/export-pdf/:id to execute headless Chrome CLI.
- * - Static Mode: Opens or downloads the pre-rendered official PDF from output/*.pdf.
- *   Provides window.print() as an additional interactive fallback for custom changes.
+ * - Static Mode: Downloads accepted published PDFs as-is, or builds an edited
+ *   issue PDF entirely in the user's browser, without publishing or a server.
+ *   The separate Yazdır action remains available for vector/selectable print PDF.
  */
 function printCurrentIssue() {
   if (!currentIssue) return;
@@ -1321,10 +1326,34 @@ function printCurrentIssue() {
   window.print();
 }
 
-async function exportPdf() {
-  if (!currentIssue || !currentIssue.id) return;
+function markPdfExportBusy(progressLabel = null) {
+  const button = document.getElementById('btn-export-pdf');
+  if (!button) return;
+  button.disabled = pdfExportBusy;
+  button.setAttribute('aria-busy', String(pdfExportBusy));
+  const label = button.querySelector('span:last-child');
+  if (label) label.textContent = pdfExportBusy ? (progressLabel || 'PDF hazırlanıyor…') : 'PDF İndir';
+}
 
-  // A published PDF is immutable; any edit or browser draft needs freshly printed pages.
+function offerGeneratedPdf({blob,filename,pages}) {
+  const link = document.getElementById('pdf-download-ready');
+  if (!link) throw new Error('PDF indirme bağlantısı bulunamadı.');
+  if (previousPdfBlobUrl) URL.revokeObjectURL(previousPdfBlobUrl);
+  previousPdfBlobUrl = URL.createObjectURL(blob);
+  link.href = previousPdfBlobUrl;
+  link.download = filename;
+  link.textContent = '✓ Hazır PDF · İndir';
+  link.title = filename + ' (' + pages + ' sayfa)';
+  link.hidden = false;
+  // The automatic download works on desktop. On iOS Safari the persistent
+  // user-clickable link is the reliable fallback when gesture expiry blocks it.
+  link.click();
+}
+
+async function exportPdf() {
+  if (!currentIssue || !currentIssue.id || pdfExportBusy) return;
+
+  // Unedited archive documents retain their original vector PDF quality.
   const draftExists = Boolean(localStorage.getItem('galata_issue_' + currentIssue.id));
   const officialPdfName = ISSUE_PDF_MAP[currentIssue.id];
   if (activeRuntimeMode === 'static' && !hasUnsavedChanges && !draftExists && officialPdfName) {
@@ -1338,11 +1367,41 @@ async function exportPdf() {
     return;
   }
 
+  if (activeRuntimeMode === 'static') {
+    syncModelFromForms();
+    try {
+      validateIssueBeforeSave(currentIssue);
+    } catch (err) {
+      showToast(err.message, 'error');
+      return;
+    }
+    const link = document.getElementById('pdf-download-ready');
+    if (link) link.hidden = true;
+    pdfExportBusy = true;
+    markPdfExportBusy();
+    try {
+      // Snapshot the actual editor state. Building is independent of localStorage
+      // capacity and never writes over previously accepted official PDF files.
+      const snapshot = JSON.parse(JSON.stringify(currentIssue));
+      const result = await buildDraftPdf(snapshot, globalThis.BulletinRenderer,
+        (done,total) => markPdfExportBusy('PDF ' + done + '/' + total));
+      offerGeneratedPdf(result);
+      showToast('Güncel PDF hazır. İndirme açılmazsa “Hazır PDF · İndir” bağlantısına dokunun. Yayımlanmadı.', 'success');
+    } catch (err) {
+      showToast('PDF oluşturulamadı: ' + err.message + ' — Alternatif: Yazdır > PDF olarak kaydet.', 'error');
+    } finally {
+      pdfExportBusy = false;
+      markPdfExportBusy();
+    }
+    return;
+  }
+
+  // Existing local-server path retains selectable-text/headless Chrome output.
   const saveResult = await saveCurrentIssue();
   if (!saveResult) return;
   if (saveResult === 'server') {
     try {
-      const res = await fetch('/api/export-pdf/' + encodeURIComponent(currentIssue.id), { method: 'POST' });
+      const res = await fetch('/api/export-pdf/' + encodeURIComponent(currentIssue.id), {method:'POST'});
       const data = await res.json();
       if (!res.ok || !data.outputPdf) throw new Error(data.error || 'PDF çıktısı oluşturulmadı.');
       showToast('Güncel içerikten A4 PDF oluşturuldu.', 'success');
@@ -1351,12 +1410,8 @@ async function exportPdf() {
     } catch (err) {
       showToast('PDF motoru başarısız: ' + err.message + '. Mevcut PDF korunur; tarayıcıdan PDF kaydedin.', 'error');
       printCurrentIssue();
-      return;
     }
   }
-
-  showToast('Bu sayı tarayıcı taslağıdır; eski resmî PDF yerine güncel sayfalar yazdırılacak. Yazdır > PDF olarak kaydet.', 'info');
-  printCurrentIssue();
 }
 
 /**
