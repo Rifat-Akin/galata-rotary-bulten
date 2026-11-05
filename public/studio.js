@@ -1445,6 +1445,41 @@ function downloadJSON(data, filename) {
   }, 200);
 }
 
+async function restoreJsonBackup(file) {
+  if (!file) return;
+  if (file.size > 40 * 1024 * 1024) throw new Error('JSON yedeği 40 MiB sınırını aşıyor.');
+  let issue;
+  try { issue = JSON.parse(await file.text()); }
+  catch { throw new Error('Geçersiz JSON dosyası.'); }
+  if (!issue || typeof issue !== 'object' || Array.isArray(issue) ||
+      !/^(20[0-9]{2}|2100)-(0[1-9]|1[0-2])-[a-z0-9-]+$/.test(issue.id || '') ||
+      !Array.isArray(issue.articles) || issue.articles.length > 36 ||
+      !issue.culture || typeof issue.culture !== 'object' ||
+      !issue.club || typeof issue.club !== 'object' ||
+      !Number.isInteger(issue.issueNumber) || issue.issueNumber < 1 || issue.issueNumber > 999 ||
+      issue.articles.some(art => !art || typeof art.title !== 'string' ||
+        !Array.isArray(art.photos) || art.photos.length > 4)) {
+    throw new Error('Bu dosya geçerli bir Bülten Stüdyosu yedeği değil.');
+  }
+  validateIssueBeforeSave(issue);
+  if (hasUnsavedChanges && !confirm('Açık sayıdaki kaydedilmemiş değişiklikleri bırakıp yedeği açmak istiyor musunuz?')) {
+    return false;
+  }
+  const current = await readStoredDraft(issue.id);
+  if (current && !confirm('Bu aya ait mevcut cihaz taslağı yedek dosyasıyla değiştirilecek. Önceki taslağı indirmek ve devam etmek istiyor musunuz?')) {
+    return false;
+  }
+  if (current) downloadJSON(current, issue.id + '-onceki-taslak-yedek.json');
+  await saveStoredDraft(issue); // writes only to this browser, never to GitHub
+  const verified = await readStoredDraft(issue.id);
+  if (JSON.stringify(verified) !== JSON.stringify(issue)) {
+    throw new Error('Yedek içe alındıktan sonra geri okuma doğrulanamadı.');
+  }
+  await loadIssuesList(issue.id);
+  showToast('Bülten yedeği bu cihazda geri yüklendi. PDF hazırlayabilirsiniz.', 'success');
+  return true;
+}
+
 /**
  * Validates corporate rules prior to persistence (Turkish-resilient regex)
  */
@@ -1937,6 +1972,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 5. Action Buttons & Export Controls
   document.getElementById('btn-save')?.addEventListener('click', saveCurrentIssue);
+  document.getElementById('btn-import-json')?.addEventListener('click', () =>
+    document.getElementById('inp-import-json')?.click());
+  document.getElementById('inp-import-json')?.addEventListener('change', async event => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    try { await restoreJsonBackup(file); }
+    catch (err) { showToast('JSON geri yüklenemedi: ' + err.message, 'error'); }
+  });
   document.getElementById('btn-download-json')?.addEventListener('click', () => {
     if (!currentIssue) return;
     syncModelFromForms();
