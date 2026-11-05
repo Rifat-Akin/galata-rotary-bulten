@@ -188,3 +188,6 @@ Yeni GitHub Actions akışı `pull_request` üzerinde güvenli ön denetim, `mai
 
 Bu proje Galata Rotary Kulübü için geliştirilmiş olup MIT Lisansı ile korunmaktadır.  
 Kaynak kod için `LICENSE` dosyasındaki MIT hükümleri geçerlidir. Kurumsal Rotary logoları, fotoğraflar, üçüncü kişi eserleri ve bülten içerikleri MIT lisansı kapsamında değildir; `ASSETS_NOTICE.md` geçerlidir.
+### Editoryal çeşitlilik ve fotoğraf sıralaması — 5 Kasım 2026
+
+Her haberde **Standart Haber** veya **Öne Çıkan Haber** sunumu seçilebilir. Birden fazla fotoğraflı haberde **Ana görsel yap** ile büyük baskı fotoğrafı belirlenir; özgün fotoğraf sırası ve açıklamaları korunur. Fotoğraf sayısına uymayan mizanpajlar pasiftir; tek bir haber en fazla dört fotoğraf içerir (fazlası ayrı habere ayrılır). Özel sunumlar yeni/düzenlenen yerel taslaklarda önizleme ve **PDF İndir** çıktısına yansır. Resmî arşiv JSON'ları bu değişiklikle dönüştürülmez.
