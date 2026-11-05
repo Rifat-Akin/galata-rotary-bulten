@@ -524,6 +524,7 @@ function createArticleCardElement(art, index, isCollapsed = false) {
     : art.layout === 'two-col' ? 'editorial-duo'
     : (art.layout || defaultPhotoLayout(photoCount));
   const displayTitle = art.title ? (art.title.length > 28 ? art.title.substring(0, 28) + '...' : art.title) : 'Başlıksız Haber';
+  const storyStyle = art.storyStyle === 'feature' ? 'feature' : 'standard';
 
   card.innerHTML = `
     <div class="article-card-header" data-action="toggle-card" data-index="${index}" title="Genişlet / Daralt">
@@ -851,7 +852,6 @@ function deleteArticle(idx) {
     card.dataset.index = newIdx;
     const art = currentIssue.articles[newIdx];
     const displayTitle = art.title ? (art.title.length > 28 ? art.title.substring(0, 28) + '...' : art.title) : 'Başlıksız Haber';
-   const storyStyle = art.storyStyle === 'feature' ? 'feature' : 'standard';
 
     // Update header index and title
     const headerTitleSpan = card.querySelector('.article-num-title');
