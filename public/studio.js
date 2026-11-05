@@ -22,7 +22,7 @@ let previousPdfBlobUrl = null;
 
 // Asset release token: PDF downloads must not reuse a stale browser cache
 // after a new GitHub Pages publish. Keep synced with the module URLs in index.html.
-const PUBLIC_RELEASE_TAG = '20261105-editorial14';
+const PUBLIC_RELEASE_TAG = '20261105-monthly15';
 
 // Official Pre-Rendered PDF Mapping
 const ISSUE_PDF_MAP = {
@@ -328,6 +328,58 @@ async function selectIssue(issueId) {
   }
 }
 
+function renderAnnouncementEditor() {
+  const host = document.getElementById('announcements-container');
+  if (!host || !currentIssue) return;
+  host.replaceChildren();
+  const items = currentIssue.culture?.announcements;
+  if (!Array.isArray(items)) {
+    const hint = document.createElement('p');
+    hint.className = 'editorial-hint';
+    hint.textContent = 'Bu arşiv sayısının eski duyuruları korunuyor. Duyuru Ekle seçilirse bu sayıya özel düzenlenebilir duyurular kullanılacak.';
+    host.append(hint);
+    return;
+  }
+  if (!items.length) {
+    const hint = document.createElement('p');
+    hint.className = 'editorial-hint';
+    hint.textContent = 'Bu ay için henüz duyuru eklenmedi; başka aylardan isim veya tarih kopyalanmaz.';
+    host.append(hint);
+  }
+  items.forEach((item, index) => {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'announcement-editor-card';
+    const titleLabel = document.createElement('label');
+    titleLabel.textContent = 'Duyuru ' + (index + 1) + ' başlığı';
+    const title = document.createElement('input');
+    title.className = 'form-input';
+    title.value = String(item.title || '');
+    title.dataset.announcementIndex = String(index);
+    title.dataset.announcementField = 'title';
+    title.maxLength = 120;
+    title.id = 'announcement-title-' + index;
+    titleLabel.htmlFor = title.id;
+    const bodyLabel = document.createElement('label');
+    bodyLabel.textContent = 'Duyuru metni';
+    const body = document.createElement('textarea');
+    body.className = 'form-textarea';
+    body.rows = 3;
+    body.maxLength = 1200;
+    body.value = String(item.body || '');
+    body.dataset.announcementIndex = String(index);
+    body.dataset.announcementField = 'body';
+    body.id = 'announcement-body-' + index;
+    bodyLabel.htmlFor = body.id;
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'btn btn-secondary';
+    remove.textContent = 'Duyuruyu Kaldır';
+    remove.dataset.removeAnnouncement = String(index);
+    wrapper.append(titleLabel, title, bodyLabel, body, remove);
+    host.append(wrapper);
+  });
+}
+
 /**
  * Populates all sidebar editor form fields from the in-memory currentIssue model
  */
@@ -339,6 +391,7 @@ function populateFormsFromModel() {
   setInputValue('inp-month', currentIssue.month || '');
   setInputValue('inp-year', currentIssue.year || 2026);
   setInputValue('inp-rotary-month-theme', currentIssue.rotaryMonthTheme || '');
+  setInputValue('inp-period-theme', currentIssue.theme || '');
   setInputValue('inp-club-meeting', currentIssue.club ? currentIssue.club.meeting : '');
 
   if (currentIssue.officers) {
@@ -374,6 +427,8 @@ function populateFormsFromModel() {
     }
   }
 
+  renderAnnouncementEditor();
+
   // 5. Arka Kapak
   if (currentIssue.backCover) {
     setInputValue('inp-backcover-theme', currentIssue.backCover.theme || 'ÇOCUK FELCİNE SON');
@@ -405,6 +460,12 @@ function syncModelFromForms() {
   currentIssue.month = document.getElementById('inp-month')?.value || '';
   currentIssue.year = parseInt(document.getElementById('inp-year')?.value || '2026', 10);
   currentIssue.rotaryMonthTheme = document.getElementById('inp-rotary-month-theme')?.value || '';
+  currentIssue.theme = document.getElementById('inp-period-theme')?.value?.trim() || '';
+  const monthSpec = MONTH_ENTRIES.find(entry => entry[0] === currentIssue.month);
+  if (monthSpec) {
+    const start = monthSpec[2] >= 7 ? currentIssue.year : currentIssue.year - 1;
+    currentIssue.rotaryYear = start + '-' + (start + 1);
+  }
 
   if (!currentIssue.club) currentIssue.club = {};
   currentIssue.club.meeting = document.getElementById('inp-club-meeting')?.value || '';
@@ -1321,6 +1382,15 @@ function validateIssueBeforeSave(data) {
       throw new Error(`Haber ${index + 1}: Sunum biçimi geçersiz.`);
     }
   }
+  if (data?.culture?.announcements !== undefined) {
+    const notices = data.culture.announcements;
+    if (!Array.isArray(notices) || notices.length > 6 ||
+      notices.some(item => !item || typeof item.title !== 'string' ||
+        typeof item.body !== 'string' || item.title.length > 120 ||
+        item.body.length > 1200)) {
+      throw new Error('Duyuru alanları geçersiz veya çok uzun.');
+    }
+  }
   const serialized = JSON.stringify(data);
   if (FORBIDDEN_THEME_REGEX.test(serialized) || hasForbiddenBrandDeep(data)) {
     throw new Error('Kurumsal Kimlik İhlali: "Rotary Sihri" ifadesi kesinlikle kullanılamaz! Tema "KALICI ETKİ YARAT" olmalıdır.');
@@ -1614,19 +1684,30 @@ async function startNewIssue(payload) {
     if (!currentIssue) throw new Error('Künye kopyalanabilecek mevcut sayı bulunamadı.');
     const base = JSON.parse(JSON.stringify(currentIssue));
     const rotaryStart = month[2] >= 7 ? year : year - 1;
+    const rotaryYear = rotaryStart + '-' + (rotaryStart + 1);
+    const samePeriod = base.rotaryYear === rotaryYear;
     const draft = { ...base, id, month: month[0], year, issueNumber,
-      rotaryYear: rotaryStart + '-' + (rotaryStart + 1),
+      rotaryYear,
       rotaryMonthTheme: payload.rotaryMonthTheme || '',
-      theme: 'KALICI ETKİ YARAT',
-      presidentMessage: { ...(base.presidentMessage || {}), title: month[0] + ' Ayı Başkan Mesajı', body: '' },
+      theme: samePeriod ? (base.theme || '') : '',
+      officers: samePeriod ? {...(base.officers || {})} : {
+        riPresident: '', districtGovernor: '', assistantGovernor: '',
+        president: '', secretary: '', treasurer: '', bulletinCommittee: []
+      },
+      presidentMessage: { ...(base.presidentMessage || {}),
+        title: month[0] + ' Ayı Başkan Mesajı', body: '',
+        photo: samePeriod ? (base.presidentMessage?.photo || '') : ''
+      },
       articles: [],
-      culture: { title: 'Galata Kültür Köşesi', book: { title: '', author: '', cover: '', summary: '' } }
+      culture: { title: 'Galata Kültür Köşesi',
+        announcements: [],
+        book: { title: '', author: '', cover: '', summary: '' } }
     };
     localStorage.setItem('galata_issue_' + id, JSON.stringify(draft));
     localStorage.setItem('galata_issue_timestamp_' + id, new Date().toISOString());
     closeNewIssueModal();
     await loadIssuesList(id);
-    showToast('Yeni sayı tarayıcıda boş taslak olarak oluşturuldu. Kalıcı yayın için JSON indirip depoya ekleyin.', 'info');
+    showToast('Yeni sayı bu cihazda taslak olarak açıldı. PDF İndir ile yayımlamadan dosya oluşturabilirsiniz.', 'info');
   } catch (err) {
     showToast('Yeni Ay Hatası: ' + err.message, 'error');
   }
@@ -1736,6 +1817,42 @@ document.addEventListener('DOMContentLoaded', () => {
     editorPane.addEventListener('input', queuePreviewRender);
     editorPane.addEventListener('change', queuePreviewRender);
   }
+
+  // Monthly notices are the only announcement source for future issues.
+  document.getElementById('btn-add-announcement')?.addEventListener('click', () => {
+    if (!currentIssue) return;
+    currentIssue.culture ||= {};
+    if (!Array.isArray(currentIssue.culture.announcements)) {
+      if (!confirm('Bu arşiv sayısının mevcut duyurularını bu sayıya özel yeni duyurularla değiştirmek istiyor musunuz?')) return;
+      currentIssue.culture.announcements = [];
+    }
+    if (currentIssue.culture.announcements.length >= 6) {
+      showToast('Bir sayfada en fazla altı kısa duyuru ekleyebilirsiniz.', 'error');
+      return;
+    }
+    currentIssue.culture.announcements.push({title:'',body:''});
+    renderAnnouncementEditor();
+    queuePreviewRender();
+  });
+  document.getElementById('announcements-container')?.addEventListener('input', event => {
+    const el = event.target;
+    const i = Number(el.dataset.announcementIndex);
+    const key = el.dataset.announcementField;
+    if (!Number.isInteger(i) || !['title','body'].includes(key) ||
+        !Array.isArray(currentIssue?.culture?.announcements) ||
+        !currentIssue.culture.announcements[i]) return;
+    currentIssue.culture.announcements[i][key] = el.value;
+    queuePreviewRender();
+  });
+  document.getElementById('announcements-container')?.addEventListener('click', event => {
+    const button = event.target.closest('[data-remove-announcement]');
+    if (!button || !currentIssue) return;
+    const index = Number(button.dataset.removeAnnouncement);
+    if (!Number.isInteger(index) || !Array.isArray(currentIssue.culture?.announcements)) return;
+    currentIssue.culture.announcements.splice(index, 1);
+    renderAnnouncementEditor();
+    queuePreviewRender();
+  });
 
   // 5. Action Buttons & Export Controls
   document.getElementById('btn-save')?.addEventListener('click', saveCurrentIssue);
