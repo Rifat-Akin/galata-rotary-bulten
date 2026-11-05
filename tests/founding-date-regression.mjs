@@ -50,5 +50,5 @@ test('all archived issue metadata and new-issue defaults agree with the 1000th m
     assert.ok(!source.includes('02.09.2003'), file);
   }
   const validator = fs.readFileSync(path.join(root, 'scripts/validate-issues.mjs'), 'utf8');
-  assert.match(validator, /foundationDate !== '03\\.09\\.2003'/);
+  assert.ok(validator.includes("foundationDate !== '03.09.2003'"));
 });
