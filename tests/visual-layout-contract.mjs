@@ -84,6 +84,8 @@ test('September issue 3 page 3 has an asymmetric editorial photo story', () => {
   assert.match(block('.editorial-duo .bento-photo-card:not(:first-child)'), /transform:\s*none/);
   assert.match(block('.bento-3 .bento-photo-card:first-child'), /grid-column:\s*1 \/ -1/);
   assert.match(block('.bento-4'), /grid-template-rows:\s*max-content max-content/);
+  assert.match(block('.article-card.compact .single-col .bento-img'), /max-height:\s*58mm/,
+    'two stories on one A4 must have half-page photo budgets');
   for (const sel of ['.single-col .bento-img', '.bento-3 .bento-img', '.bento-4 .bento-img']) {
     assert.match(block(sel), /height:\s*auto/);
     assert.match(block(sel), /object-fit:\s*contain/);
