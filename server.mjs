@@ -382,6 +382,8 @@ export function createIssue(customData = {}) {
     throw new Error('Year or issue number is invalid');
   }
   const rotaryStartYear = monthEntry.num >= 7 ? targetYear : targetYear - 1;
+  const newPeriod = `${rotaryStartYear}-${rotaryStartYear + 1}`;
+  const samePeriod = baseIssue?.rotaryYear === newPeriod;
   const targetTheme = customData.rotaryMonthTheme || monthEntry.theme;
 
   const monthSlug = targetMonth
@@ -412,10 +414,12 @@ export function createIssue(customData = {}) {
   const newIssueTemplate = {
     id: safeId,
     issueNumber,
-    rotaryYear: `${rotaryStartYear}-${rotaryStartYear + 1}`,
+    rotaryYear: newPeriod,
     month: targetMonth,
     year: targetYear,
-    theme: "KALICI ETKİ YARAT",
+    // Never present previous Rotary-year leadership or branding as current.
+    theme: newPeriod === '2026-2027'
+      ? 'KALICI ETKİ YARAT' : samePeriod ? (baseIssue?.theme || '') : '',
     rotaryMonthTheme: targetTheme,
     club: baseIssue ? { ...baseIssue.club } : {
       name: "Galata Rotary Kulübü",
@@ -425,7 +429,11 @@ export function createIssue(customData = {}) {
       foundationDate: "03.09.2003",
       meeting: "Her Pazartesi 19:30 | Grand Hyatt İstanbul Taksim & Zoom"
     },
-    officers: baseIssue ? { ...baseIssue.officers } : {
+    officers: (samePeriod && baseIssue?.officers) ? { ...baseIssue.officers }
+      : (newPeriod !== '2026-2027' ? {
+        riPresident: '', districtGovernor: '', assistantGovernor: '',
+        president: '', secretary: '', treasurer: '', bulletinCommittee: []
+      } : {
       riPresident: "Olayinka Hakeem Babalola",
       districtGovernor: "Erden Gökmen",
       assistantGovernor: "İhsan Ercan",
@@ -433,15 +441,18 @@ export function createIssue(customData = {}) {
       secretary: "Gökhan Alpertunga",
       treasurer: "Burhan Tokgöz",
       bulletinCommittee: ["Rifat Akın Kaplan", "Özgür Kuddar", "GDB Polat Özcan"]
-    },
+      }),
     presidentMessage: {
       title: `${targetMonth} Ayı Başkan Mesajı`,
       body: '', // Not editorially approved until the club supplies a president message
-      photo: baseIssue && baseIssue.presidentMessage ? baseIssue.presidentMessage.photo : "assets/photos/2026-09/baskan_sevilay_aksel.jpg"
+      photo: samePeriod && baseIssue?.presidentMessage
+        ? baseIssue.presidentMessage.photo
+        : newPeriod === '2026-2027' ? "assets/photos/2026-09/baskan_sevilay_aksel.jpg" : ''
     },
     articles: [], // Do not invent meetings or project outcomes for a new month
     culture: {
       title: "Galata Kültür Köşesi",
+      announcements: [], // Every month has its own editable, initially empty notices.
       book: {
         title: '',
         author: '',
