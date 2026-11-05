@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Galata Rotary Bülten Stüdyosu — 2026-2027</title>
-  <link rel="stylesheet" href="styles/bulletin-print.css?v=20261105-editorial14">
-  <link rel="stylesheet" href="styles/studio.css?v=20261105-editorial14">
+  <link rel="stylesheet" href="styles/bulletin-print.css?v=20261105-monthly15">
+  <link rel="stylesheet" href="styles/studio.css?v=20261105-monthly15">
   <link rel="icon" type="image/svg+xml" href="assets/brand/rotary-logo.svg">
 </head>
 <body>
@@ -139,6 +139,11 @@
           <div class="form-group">
             <label class="form-label" for="inp-rotary-month-theme">Rotary Tanımlanmış Ay Teması</label>
             <input type="text" id="inp-rotary-month-theme" class="form-input" placeholder="Temel Eğitim ve Okuryazarlık Ayı">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="inp-period-theme">Dönem Teması</label>
+              <input type="text" id="inp-period-theme" class="form-input" placeholder="Bu dönemin onaylı temasını girin">
+              <small class="editorial-hint">Yeni Rotary döneminde önceki yılın teması ve yöneticileri otomatik kullanılamaz.</small>
           </div>
 
           <div class="form-group">
@@ -269,6 +274,16 @@
           <div class="form-group">
             <label class="form-label">Kitap Tanıtımı ve Özeti</label>
             <textarea id="inp-book-summary" class="form-textarea" rows="6" placeholder="Kitap hakkında editoryal değerlendirme..."></textarea>
+          </div>
+          <div class="form-group" id="monthly-announcements-editor">
+            <div class="section-title-box" style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+              <div>
+                <h3 class="section-title">Bu Ayın Duyuruları</h3>
+                <p class="section-desc">Yalnız bu sayıya ait doğrulanmış duyuruları girin.</p>
+              </div>
+              <button type="button" class="btn btn-secondary" id="btn-add-announcement">Duyuru Ekle</button>
+            </div>
+            <div id="announcements-container" aria-live="polite"></div>
           </div>
         </section>
 
@@ -448,7 +463,7 @@
   <div id="toast-container" class="toast-container no-print"></div>
 
   <!-- Load Renderer & Studio Controller -->
-  <script type="module" src="renderer.js?v=20261105-editorial14"></script>
-  <script type="module" src="studio.js?v=20261105-editorial14"></script>
+  <script type="module" src="renderer.js?v=20261105-monthly15"></script>
+  <script type="module" src="studio.js?v=20261105-monthly15"></script>
 </body>
 </html>
