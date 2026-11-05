@@ -1,5 +1,7 @@
 # Galata Rotary — Fotoğraf mizanpajı / gerçek PDF görsel kabulü
 
+> **GÜNCEL DURUM (05.11.2026):** Bu dosyanın eski tarihli kuruluş günü uyuşmazlığı notu **HISTORICAL / KAPANDI**. Kullanıcı 1000. toplantı sunumunun 3. slaytını kaynak seçti: kuruluş **03.09.2003**, charter **27.01.2004**. Görsel-telif ve fotoğraf eşleştirme konuları ayrıca açıktır. Ayrıntılar: `docs/FOUNDING_DATE_RECONCILIATION_2026-11-02.md`.
+
 **Tarih:** 2026-11-02 • **Kaynak:** `Rifat-Akin/galata-rotary-bulten`  
 **Başlangıç HEAD:** `0e78861e3de1f5b6cd3bbdc672521c1357017edd`  
 **Kullanıcı isteği:** Eylül/Sayı 3/sayfa 3'teki 50/50 bölünmüş görsel yerleşimini daha güçlü, profesyonel dergi kompozisyonuna dönüştür. **Tek yazar:** mevcut görev sahibi, başka kod ajanı kullanılmadı.

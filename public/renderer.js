@@ -216,7 +216,7 @@ function renderCoverPage(issue, pageNum, totalPages, options) {
           <span class="kunye-meeting-line">Toplantı:</span> ${escapeHTML(club.meeting || 'Her Pazartesi 19:30 | Grand Hyatt İstanbul Taksim & Zoom')}
         </div>
         <div style="text-align: right;">
-          Kuruluş: ${escapeHTML(club.foundationDate || '02.09.2003')} | Charter: ${escapeHTML(club.charterDate || '27.01.2004')}
+          Kuruluş: ${escapeHTML(club.foundationDate || '03.09.2003')} | Charter: ${escapeHTML(club.charterDate || '27.01.2004')}
         </div>
       </div>
     </section>

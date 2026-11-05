@@ -1,6 +1,18 @@
 # Eylül Sayı 3 — Kuruluş tarihi kaynak uzlaştırması (2 Kasım 2026)
 
-## Doğrulananlar
+## Güncel kaynak kararı — 5 Kasım 2026 (önceki geçici kabulü değiştirir)
+
+**Kabul edilen kulüp tarihi:** Kuruluş **3 Eylül 2003** (`03.09.2003`), charter **27 Ocak 2004** (`27.01.2004`). Kullanıcı, 5 Kasım 2026'da kuruluş günü konusunda **1000. Toplantı** sunumunda yazanın kabul edilmesini açıkça istemiştir. Referans: `1000. toplantı.pptx`, `Kulübümüzün Tarihçesi`, 3. slayt (20 Nisan 2026 bağlamı). Bu kaynakta kuruluş **3 Eylül 2003** olarak yazmaktadır.
+
+Önceki 2 Eylül 2003 kaydı, 30 Ocak 2004 tarihli başka arşiv sunumunda bulunur; karşılaştırma tarihçesi aşağıda **tarihsel kanıt** olarak saklanır. Ancak **mevcut bültenin kabul edilmiş veri değeri değildir**. Önceki `Eylül 2003` belirsizlik çözümü de **HISTORICAL / SUPERSEDED** durumundadır.
+
+Bu karar ile dört aylık bültenin `club.foundationDate` alanı, sunucu yeni sayı varsayılanı, PDF renderer yedeği ve test fixture tarihleri `03.09.2003` olarak eşitlenmiştir. Eylül Sayı 3 başkan mesajı ve anı haberi **3 Eylül 2003** diye güncellenmiştir. Eylül 2026 anı haberi `date` alanı olay günü kanıtı olmadığından **Eylül 2026** kalır; 2019 tarihli fotoğraf açıklaması gün bilgisini korur. Fotoğraf hakları ve yanlış etkinlik-görsel eşleşmesi ayrı editoryal meselelerdir.
+
+---
+
+## Tarihsel inceleme — 2 Kasım 2026 (güncel karar değildir)
+
+### Doğrulananlar
 
 - Kullanıcının işaret ettiği **Galata Rotary 1000. toplantı sunumu** (`1000. toplantı.pptx`, 20 Nisan 2026 bağlamı), `Kulübümüzün Tarihçesi` başlıklı 3. slaytta **Kuruluş: 3 Eylül 2003; Charter: 27 Ocak 2004** diyor. Kulüp arşivindeki önceki taslak aynı tarihi yalnız **Eylül 2003** diye yazıyor.
 - **30 Ocak 2004 / 2003–2004 Dördüncü Asamble** sunumu (5. ve 7. slayt), **Kuruluş: 02.09.2003** diyor. Açık kaynak: https://www.slideserve.com/malaya/galata-rotary-kul-b

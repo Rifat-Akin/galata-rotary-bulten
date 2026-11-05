@@ -207,6 +207,11 @@ function validateIssue(filename) {
     if (issue.club.charterDate !== '27.01.2004') {
       errors.push(`Charter Tarihi Hatası: "${issue.club.charterDate}", beklenen: "27.01.2004"`);
     }
+    // 1000. toplantı sunumu (Kulübümüzün Tarihçesi, slayt 3),
+    // 05.11.2026 tarihli kulüp sahibi kaynak tercihi.
+    if (issue.club.foundationDate !== '03.09.2003') {
+      errors.push(`Kuruluş Tarihi Hatası: "${issue.club.foundationDate}", beklenen: "03.09.2003"`);
+    }
   }
 
   // 5. Officers Verification
