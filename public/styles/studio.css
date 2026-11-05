@@ -1758,3 +1758,68 @@ body.mode-reader-active .a4-page {
 .pdf-ready-link[hidden] { display: none !important; }
 .pdf-ready-link:focus-visible { outline: 3px solid #17458F; outline-offset: 3px; }
 #btn-export-pdf[aria-busy="true"] { opacity: 0.78; cursor: progress; }
+
+/* Photo priority and story treatment: real touch controls, no source reorder. */
+.story-style-switcher {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 5px;
+}
+.story-style-btn {
+  min-width: 0;
+  min-height: 42px;
+  border: 1px solid #B9CBDC;
+  background: #FFF;
+  color: #274365;
+  border-radius: 7px;
+  padding: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.story-style-btn.active {
+  background: #FFF4D7;
+  border-color: #B78300;
+  color: #694200;
+  box-shadow: 0 0 0 1px #B78300;
+}
+.photo-lead-btn {
+  min-height: 36px;
+  padding: 6px 9px;
+  border: 1px solid #B9CBDC;
+  border-radius: 6px;
+  background: #FFF;
+  color: #274365;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.photo-lead-btn[aria-pressed="true"] {
+  background: #FFF4D7;
+  color: #694200;
+  border-color: #B78300;
+}
+.story-style-btn:focus-visible, .photo-lead-btn:focus-visible {
+  outline: 3px solid var(--studio-blue);
+  outline-offset: 2px;
+}
+.bento-option-btn:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+.editorial-hint {
+  display: block;
+  margin: 6px 0 0;
+  color: #475569;
+  font-size: 11px;
+  line-height: 1.4;
+}
+.photo-item-row .photo-inputs { min-width: 0; }
+@media screen and (max-width: 420px) {
+  .photo-item-row { align-items: flex-start; gap: 5px; padding: 7px 5px; }
+  .photo-preview-thumb { width: 40px; height: 40px; flex: 0 0 40px; }
+  .photo-lead-btn { font-size: 11px; padding: 5px; }
+}
