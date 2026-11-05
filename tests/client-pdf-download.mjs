@@ -40,5 +40,5 @@ test('edited monthly PDF is created without a publishing endpoint', () => {
   assert.match(controller, /invalidatePdfReadyLink\(\)/);
   assert.match(controller, /'PDF İndir'/);
   assert.match(index, /id="pdf-download-ready"/);
-  assert.match(index, /studio\.js\?v=20261105-editorial14/);
+  assert.match(index, /studio\.js\?v=20261105-monthly15/);
 });
