@@ -1732,7 +1732,8 @@ body.mode-reader-active .a4-page {
     height: auto !important;
     min-height: 0 !important;
     flex: none !important;
-    overflow: visible !important;
+    overflow-x: auto !important; /* retain 100% zoom horizontal panning */
+    overflow-y: visible !important; /* auto-height avoids nested vertical traps */
     -webkit-overflow-scrolling: touch;
   }
 }
