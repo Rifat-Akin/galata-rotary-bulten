@@ -162,13 +162,34 @@ async function waitForPrintablePage(session) {
           if (bookCovers.some(img => getComputedStyle(img).objectFit !== 'contain')) {
             visualFailures.push('Book cover could be cropped');
           }
+          // Natural-height photo grids intentionally leave white editorial breathing
+          // room. Test actual image/frame geometry instead of requiring a stretched
+          // gray gallery to fill 75% of the page.
           for (const container of document.querySelectorAll('.article-card .bento-container')) {
             const grid = container.firstElementChild;
-            if (grid && grid.querySelector('.bento-img')) {
-              const totalHeight = container.getBoundingClientRect().height;
-              const usedHeight = grid.getBoundingClientRect().height;
-              if (totalHeight > 15 && usedHeight / totalHeight < 0.75) {
-                visualFailures.push('Article gallery leaves most of its page blank');
+            if (!grid) continue;
+            const frames = [...grid.querySelectorAll('.bento-photo-card')];
+            if (frames.some(frame => {
+              const img = frame.querySelector('.bento-img');
+              const caption = frame.querySelector('.bento-caption');
+              if (!img || !caption) return true;
+              const ir = img.getBoundingClientRect();
+              const fr = frame.getBoundingClientRect();
+              const cr = caption.getBoundingClientRect();
+              return ir.width < 30 || ir.height < 18 ||
+                Math.abs((ir.left + ir.right - fr.left - fr.right) / 2) > 2 ||
+                ir.top < fr.top - 2 || cr.top < ir.bottom - 1;
+            })) {
+              visualFailures.push('Article gallery contains uncentered or invalid photo frames');
+              break;
+            }
+            const row = grid.classList.contains('editorial-duo') ? frames
+              : (grid.classList.contains('bento-3') || grid.classList.contains('bento-4'))
+                ? frames.slice(1) : [];
+            if (row.length > 1) {
+              const top = row.map(frame => frame.getBoundingClientRect().top);
+              if (Math.max(...top) - Math.min(...top) > 5) {
+                visualFailures.push('Article gallery photo row edges are misaligned');
                 break;
               }
             }
