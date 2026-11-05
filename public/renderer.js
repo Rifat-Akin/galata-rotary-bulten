@@ -382,11 +382,10 @@ function renderBentoGrid(article, options) {
     : photos.length === 2 ? 'editorial-duo'
     : photos.length === 3 ? 'bento-3'
     : 'bento-4';
-  const requestedLayout = article.layout || inferredLayout;
-  const layout = photos.length <= 1 ? 'single-col'
-    : requestedLayout === 'two-col' ? 'editorial-duo'
-    : ['single-col', 'editorial-duo', 'bento-3', 'bento-4'].includes(requestedLayout)
-      ? requestedLayout : inferredLayout;
+  // A stale layout from an imported draft must never stack four photos in
+  // one narrow column. Photo count owns A4-safe grid geometry; visual emphasis
+  // and lead-photo priority are separate editor-controlled presentation choices.
+  const layout = inferredLayout;
 
   if (photos.length === 0) {
     return '';
