@@ -69,9 +69,11 @@
         <span>↺</span> <span>Sıfırla</span>
       </button>
 
-      <button id="btn-export-pdf" aria-label="Bülteni PDF olarak indir" class="btn btn-accent" title="Baskı Kalitesinde A4 PDF İndir">
+      <button id="btn-export-pdf" aria-label="Güncel bülteni PDF olarak indir" class="btn btn-accent" title="Güncel bülteni PDF dosyası olarak indirir; yayınlamaz">
         <span>📄</span> <span>PDF İndir</span>
       </button>
+      <a id="pdf-download-ready" class="pdf-ready-link no-print" href="#" hidden
+         aria-label="Hazırlanan PDF dosyasını indir">✓ Hazır PDF · İndir</a>
 
       <button id="btn-print" aria-label="Bülteni yazdır" class="btn btn-secondary mobile-secondary-action" title="Tarayıcı Yazdırma İletişim Kutusunu Aç (Ctrl+P)">
         <span>🖨️</span> <span>Yazdır</span>
@@ -447,6 +449,6 @@
 
   <!-- Load Renderer & Studio Controller -->
   <script type="module" src="renderer.js?v=20261105-mobilepdf12"></script>
-  <script type="module" src="studio.js?v=20261105-mobilepdf12"></script>
+  <script type="module" src="studio.js?v=20261105-pdf13"></script>
 </body>
 </html>

@@ -1065,6 +1065,30 @@ async function runEmpiricalChallengeSuite() {
       })()`);
 
       assert('Live Title Sync: Card header preview synchronizes instantaneously', titleSyncResult?.previewText === 'Rotary Barış Konferansı 2026', titleSyncResult?.previewText);
+
+      
+      // A real browser must be able to build an unpublished, freshly edited
+      // A4 PDF Blob from source JSON. No cloud PDF backend or print dialog.
+      const exportResult = await session.eval(`(async () => {
+        const issue = await fetch('/data/issues/2026-09-eylul.json').then(r => r.json());
+        issue.articles[0].title = 'Sentetik yerel PDF testi';
+        const module = await import('/pdf-download.js?test=client-pdf-download');
+        const output = await module.buildDraftPdf(issue, globalThis.BulletinRenderer);
+        const headerBytes = new Uint8Array(await output.blob.slice(0, 5).arrayBuffer());
+        const signature = String.fromCharCode(...headerBytes);
+        const remains = document.querySelectorAll('.bulletin-local-export-stage').length;
+        return {
+          signature, pages:output.pages, bytes:output.blob.size,
+          filename:output.filename, remains
+        };
+      })()`);
+      assert('Edited draft creates valid %PDF file locally without publishing',
+        exportResult?.signature === '%PDF-' && exportResult?.bytes > 500_000,
+        JSON.stringify(exportResult));
+      assert('Edited draft PDF contains every rendered page', exportResult?.pages === 9,
+        JSON.stringify(exportResult));
+      assert('PDF exporter cleans its temporary DOM stage', exportResult?.remains === 0);
+
     }
   } finally {
     if (session) session.close();
