@@ -722,9 +722,16 @@ function addPhotoToArticle(artIdx) {
 function deletePhotoFromArticle(artIdx, photoIndex) {
   if (!currentIssue.articles || !currentIssue.articles[artIdx] || !currentIssue.articles[artIdx].photos) return;
 
-  currentIssue.articles[artIdx].photos.splice(photoIndex, 1);
-  currentIssue.articles[artIdx].layout = defaultPhotoLayout(
-    currentIssue.articles[artIdx].photos.length);
+  const article = currentIssue.articles[artIdx];
+  article.photos.splice(photoIndex, 1);
+  if (Number.isInteger(article.leadPhotoIndex)) {
+    if (article.photos.length === 0 || article.leadPhotoIndex === photoIndex) {
+      delete article.leadPhotoIndex;
+    } else if (article.leadPhotoIndex > photoIndex) {
+      article.leadPhotoIndex -= 1;
+    }
+  }
+  article.layout = defaultPhotoLayout(article.photos.length);
 
   const card = document.querySelector(`.article-card-item[data-index="${artIdx}"]`);
   if (card) {
@@ -746,6 +753,7 @@ function deletePhotoFromArticle(artIdx, photoIndex) {
         const capInp = row.querySelector('.photo-caption-input');
         const fileInp = row.querySelector('.hidden-file-input');
         const delBtn = row.querySelector('[data-action="delete-photo"]');
+        const leadBtn = row.querySelector('[data-action="set-lead-photo"]');
 
         if (urlInp) {
           urlInp.dataset.pindex = newPIdx;
@@ -763,7 +771,14 @@ function deletePhotoFromArticle(artIdx, photoIndex) {
           delBtn.dataset.photoIndex = newPIdx;
           delBtn.dataset.artIndex = artIdx;
         }
+        if (leadBtn) {
+          leadBtn.dataset.photoIndex = newPIdx;
+          leadBtn.dataset.artIndex = artIdx;
+          leadBtn.setAttribute('aria-label',
+            `Haber ${artIdx + 1}, fotoğraf ${newPIdx + 1}: ana görsel olarak seç`);
+        }
       });
+      refreshLeadPhotoButtons(card, artIdx);
 
       if (countLabel) {
         countLabel.textContent = `Fotoğraflar (${currentIssue.articles[artIdx].photos.length})`;
@@ -871,11 +886,17 @@ function deleteArticle(idx) {
       const capInp = row.querySelector('.photo-caption-input');
       const fileInp = row.querySelector('.hidden-file-input');
       const photoDelBtn = row.querySelector('[data-action="delete-photo"]');
+      const leadBtn = row.querySelector('[data-action="set-lead-photo"]');
 
       if (urlInp) urlInp.dataset.artIndex = newIdx;
       if (capInp) capInp.dataset.artIndex = newIdx;
       if (fileInp) fileInp.dataset.artIndex = newIdx;
       if (photoDelBtn) photoDelBtn.dataset.artIndex = newIdx;
+      if (leadBtn) {
+        leadBtn.dataset.artIndex = newIdx;
+        leadBtn.setAttribute('aria-label',
+          `Haber ${newIdx + 1}, fotoğraf ${Number(leadBtn.dataset.photoIndex) + 1}: ana görsel olarak seç`);
+      }
     });
   });
 
@@ -1813,12 +1834,44 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
+      // Select display priority independently of original photo order.
+      if (target.dataset.action === 'set-lead-photo') {
+        const artIdx = Number(target.dataset.artIndex);
+        const pIdx = Number(target.dataset.photoIndex);
+        const art = currentIssue?.articles?.[artIdx];
+        if (!art || !Number.isInteger(pIdx) || pIdx < 0 || pIdx >= (art.photos?.length ?? 0)) return;
+        art.leadPhotoIndex = pIdx;
+        refreshLeadPhotoButtons(target.closest('.article-card-item'), artIdx);
+        queuePreviewRender();
+        return;
+      }
+
+      // Optional magazine-style story header, still within fixed A4 limits.
+      if (target.dataset.action === 'set-story-style') {
+        const card = target.closest('.article-card-item');
+        const artIdx = Number(card?.dataset.index);
+        const style = target.dataset.style;
+        if (!currentIssue?.articles?.[artIdx] || !['standard', 'feature'].includes(style)) return;
+        currentIssue.articles[artIdx].storyStyle = style;
+        card.querySelectorAll('.story-style-btn').forEach(btn => {
+          const active = btn.dataset.style === style;
+          btn.classList.toggle('active', active);
+          btn.setAttribute('aria-pressed', String(active));
+        });
+        queuePreviewRender();
+        return;
+      }
+
       // Bento Layout Switcher Buttons
       if (target.classList.contains('bento-option-btn')) {
         const layout = target.dataset.layout;
         const switcher = target.closest('.bento-switcher');
         const artIdx = parseInt(switcher.dataset.artIndex, 10);
 
+        if (layout !== defaultPhotoLayout(currentIssue?.articles?.[artIdx]?.photos?.length ?? 0)) {
+          showToast('Bu düzen mevcut fotoğraf sayısıyla uyumsuz.', 'error');
+          return;
+        }
         if (currentIssue.articles && currentIssue.articles[artIdx]) {
           currentIssue.articles[artIdx].layout = layout;
         }
