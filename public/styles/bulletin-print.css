@@ -1416,3 +1416,22 @@ html, body {
   object-position: bottom center;
   opacity: 0.17;
 }
+/* Optional feature-story treatment adds editorial rhythm without touching
+   historical content; shared/compact A4 cards retain their original bounds. */
+.article-card.story-feature:not(.compact) {
+  border-top: 2mm solid var(--color-rotary-gold);
+  padding: 4.8mm 6mm 4.5mm;
+}
+.article-card.story-feature:not(.compact) .article-meta-bar { margin-bottom: 3mm; }
+.article-card.story-feature:not(.compact) .article-title {
+  font-size: 17pt;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.25px;
+  margin-bottom: 3.5mm;
+}
+.article-card.story-feature:not(.compact) .article-summary {
+  font-size: 9.6pt;
+  line-height: 1.49;
+}
+.article-card.story-feature:not(.compact) .bento-container { margin-top: 4mm; }
