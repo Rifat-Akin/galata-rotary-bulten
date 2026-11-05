@@ -22,7 +22,7 @@ let previousPdfBlobUrl = null;
 
 // Asset release token: PDF downloads must not reuse a stale browser cache
 // after a new GitHub Pages publish. Keep synced with the module URLs in index.html.
-const PUBLIC_RELEASE_TAG = '20261105-mobilepdf12';
+const PUBLIC_RELEASE_TAG = '20261105-editorial14';
 
 // Official Pre-Rendered PDF Mapping
 const ISSUE_PDF_MAP = {
@@ -448,7 +448,7 @@ function syncModelFromForms() {
 /**
  * Generates DOM for a single photo row
  */
-function createPhotoRowElement(photo, artIndex, photoIndex) {
+function createPhotoRowElement(photo, artIndex, photoIndex, leadIndex = 0) {
   const row = document.createElement('div');
   row.className = 'photo-item-row';
   row.dataset.photoIndex = photoIndex;
@@ -456,6 +456,10 @@ function createPhotoRowElement(photo, artIndex, photoIndex) {
   row.innerHTML = `
     <img src="${escapeAttr(photo.url || 'assets/brand/galata-silhouette.svg')}" class="photo-preview-thumb" alt="Haber ${artIndex + 1}, fotoğraf ${photoIndex + 1} önizlemesi" onerror="this.src='assets/brand/galata-silhouette.svg'">
     <div class="photo-inputs">
+      <button type="button" class="photo-lead-btn" data-action="set-lead-photo"
+        data-art-index="${artIndex}" data-photo-index="${photoIndex}"
+        aria-label="Haber ${artIndex + 1}, fotoğraf ${photoIndex + 1}: ana görsel olarak seç"
+        aria-pressed="${photoIndex === leadIndex}">${photoIndex === leadIndex ? '★ Ana görsel' : '☆ Ana görsel yap'}</button>
       <input type="text" class="photo-url-input" aria-label="Haber ${artIndex + 1}, fotoğraf ${photoIndex + 1}: görsel yolu" value="${escapeAttr(photo.url || '')}" placeholder="Görsel Yolu (assets/photos/...)" data-pindex="${photoIndex}" data-art-index="${artIndex}">
       <input type="text" class="photo-caption-input" aria-label="Haber ${artIndex + 1}, fotoğraf ${photoIndex + 1}: açıklama" value="${escapeAttr(photo.caption || '')}" placeholder="Fotoğraf Açıklaması" data-pindex="${photoIndex}" data-art-index="${artIndex}">
     </div>
@@ -479,14 +483,35 @@ function defaultPhotoLayout(count) {
     : count === 3 ? 'bento-3' : 'bento-4';
 }
 
+function refreshLeadPhotoButtons(card, artIdx) {
+  const article = currentIssue?.articles?.[artIdx];
+  const lead = globalThis.BulletinRenderer?.resolveLeadPhotoIndex?.(article) ?? 0;
+  card?.querySelectorAll('.photo-lead-btn').forEach(btn => {
+    const selected = Number(btn.dataset.photoIndex) === lead;
+    btn.setAttribute('aria-pressed', String(selected));
+    btn.textContent = selected ? '★ Ana görsel' : '☆ Ana görsel yap';
+  });
+}
+
 function setArticleLayoutControls(card, layout) {
   if (!card) return;
-  const normalized = layout === 'two-col' ? 'editorial-duo' : layout;
+  const artIdx = Number(card.dataset.index);
+  const count = currentIssue?.articles?.[artIdx]?.photos?.length ?? 0;
+  const compatible = defaultPhotoLayout(count);
   const badge = card.querySelector?.('.article-bento-badge');
-  if (badge) badge.textContent = normalized === 'editorial-duo' ? 'Ana + Destek' : normalized;
+  if (badge) badge.textContent = compatible === 'editorial-duo' ? 'Ana + Destek' : compatible;
   const switcher = card.querySelector?.('.bento-switcher');
-  switcher?.querySelectorAll?.('.bento-option-btn').forEach(btn =>
-    btn.classList.toggle('active', btn.dataset.layout === normalized));
+  switcher?.querySelectorAll?.('.bento-option-btn').forEach(btn => {
+    const allowed = btn.dataset.layout === compatible;
+    btn.disabled = !allowed;
+    btn.setAttribute('aria-disabled', String(!allowed));
+    btn.classList.toggle('active', allowed);
+  });
+  const add = card.querySelector('[data-action="add-photo"]');
+  if (add) {
+    add.disabled = count >= 4;
+    add.title = count >= 4 ? 'En fazla 4 fotoğraf; başka haber ekleyin' : 'Fotoğraf ekle';
+  }
 }
 
 function createArticleCardElement(art, index, isCollapsed = false) {
@@ -543,6 +568,18 @@ function createArticleCardElement(art, index, isCollapsed = false) {
         <textarea class="form-textarea art-field" data-field="summary" rows="4" placeholder="Haber metni veya özet...">${escapeHtml(art.summary || '')}</textarea>
       </div>
 
+      <!-- Two visually distinct but printable story treatments -->
+      <div class="form-group">
+        <label class="form-label">Haber Sunumu</label>
+        <div class="story-style-switcher" role="group" aria-label="Haber ${index + 1}: sunum biçimi">
+          <button type="button" class="story-style-btn ${storyStyle === 'standard' ? 'active' : ''}"
+            data-action="set-story-style" data-style="standard" aria-pressed="${storyStyle === 'standard'}">Standart Haber</button>
+          <button type="button" class="story-style-btn ${storyStyle === 'feature' ? 'active' : ''}"
+            data-action="set-story-style" data-style="feature" aria-pressed="${storyStyle === 'feature'}">★ Öne Çıkan Haber</button>
+        </div>
+        <small class="editorial-hint">Öne çıkan haber daha güçlü başlık ve altın vurgu kullanır. PDF önizlemesini kontrol edin.</small>
+      </div>
+
       <!-- Dynamic Bento Layout Selector -->
       <div class="form-group">
         <label class="form-label">Fotoğraf Mizanpajı (ana görsel + destekleyen kareler)</label>
@@ -564,6 +601,7 @@ function createArticleCardElement(art, index, isCollapsed = false) {
             <span>Ana + 3 Foto</span>
           </button>
         </div>
+        <small class="editorial-hint">Fotoğraf düzeni sayılarına göre seçilir; büyük görseli aşağıdan siz belirleyebilirsiniz.</small>
       </div>
 
       <!-- Photos Management -->
@@ -591,9 +629,11 @@ function createArticleCardElement(art, index, isCollapsed = false) {
   // Append photo items to list
   const photosList = card.querySelector('.photos-list');
   (art.photos || []).forEach((photo, pIdx) => {
-    photosList.appendChild(createPhotoRowElement(photo, index, pIdx));
+    photosList.appendChild(createPhotoRowElement(photo, index, pIdx,
+      globalThis.BulletinRenderer?.resolveLeadPhotoIndex?.(art) ?? 0));
   });
 
+  setArticleLayoutControls(card, bentoLayout);
   return card;
 }
 
@@ -628,6 +668,10 @@ function renderArticleCards() {
 function addPhotoToArticle(artIdx) {
   if (!currentIssue.articles || !currentIssue.articles[artIdx]) return;
   if (!currentIssue.articles[artIdx].photos) currentIssue.articles[artIdx].photos = [];
+  if (currentIssue.articles[artIdx].photos.length >= 4) {
+    showToast('Bir haberde en fazla 4 fotoğraf kullanılabilir. Kalanları ayrı bir habere ekleyin.', 'error');
+    return;
+  }
 
   const newPhoto = {
     url: 'assets/brand/galata-silhouette.svg',
@@ -652,7 +696,8 @@ function addPhotoToArticle(artIdx) {
     const countLabel = card.querySelector('.photos-count-label');
 
     if (photosList) {
-      const newRow = createPhotoRowElement(newPhoto, artIdx, photoIndex);
+      const newRow = createPhotoRowElement(newPhoto, artIdx, photoIndex,
+        globalThis.BulletinRenderer?.resolveLeadPhotoIndex?.(currentIssue.articles[artIdx]) ?? 0);
       photosList.appendChild(newRow);
 
       if (countLabel) {
@@ -791,6 +836,7 @@ function deleteArticle(idx) {
     card.dataset.index = newIdx;
     const art = currentIssue.articles[newIdx];
     const displayTitle = art.title ? (art.title.length > 28 ? art.title.substring(0, 28) + '...' : art.title) : 'Başlıksız Haber';
+   const storyStyle = art.storyStyle === 'feature' ? 'feature' : 'standard';
 
     // Update header index and title
     const headerTitleSpan = card.querySelector('.article-num-title');
