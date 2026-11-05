@@ -652,7 +652,8 @@ async function runEmpiricalChallengeSuite() {
           sliderDisplay,
           readerEditorDisplay,
           readerPreviewDisplay,
-          readerPreviewWidth
+          readerPreviewWidth,
+          documentContentWidth: document.documentElement.clientWidth
         };
       })()`);
 
@@ -661,7 +662,7 @@ async function runEmpiricalChallengeSuite() {
       assert('Tablet (<900px): header subtitle hidden to conserve horizontal budget', tabletResult?.subtitleDisplay === 'none', tabletResult?.subtitleDisplay);
       assert('Tablet (<900px): zoom slider hidden to avoid crowding', tabletResult?.sliderDisplay === 'none', tabletResult?.sliderDisplay);
       assert('Tablet (<900px) in Reader Mode: editor-pane hidden (display: none)', tabletResult?.readerEditorDisplay === 'none', tabletResult?.readerEditorDisplay);
-      assert('Tablet (<900px) in Reader Mode: preview-pane is display: flex and full width (850px)', tabletResult?.readerPreviewDisplay === 'flex' && tabletResult?.readerPreviewWidth === 850, `Display: ${tabletResult?.readerPreviewDisplay}, Width: ${tabletResult?.readerPreviewWidth}px`);
+      assert('Tablet (<900px) in Reader Mode: preview-pane fills available document content width', tabletResult?.readerPreviewDisplay === 'flex' && Math.abs(tabletResult?.readerPreviewWidth - tabletResult?.documentContentWidth) <= 1, `Display: ${tabletResult?.readerPreviewDisplay}, Width: ${tabletResult?.readerPreviewWidth}px, Available: ${tabletResult?.documentContentWidth}px`);
 
       // Set mobile phone viewport: 500px width x 800px height
       await session.send('Emulation.setDeviceMetricsOverride', {
