@@ -240,3 +240,15 @@ test('monthly editor makes story appearance and featured photo controllable', ()
   assert.match(css, /photo-lead-btn\[aria-pressed="true"\]/);
   assert.match(css, /story-style-btn\.active/);
 });
+
+test('stale imported grid hints cannot force an overflowing multi-photo column', () => {
+  const issue = JSON.parse(fs.readFileSync(
+    path.join(root, 'data/issues/2026-09-eylul.json'), 'utf8'));
+  const four = issue.articles[1];
+  const original = four.photos.map(photo => photo.url);
+  four.layout = 'single-col'; // obsolete imported draft state
+  const html = renderIssueToHTML(issue);
+  const pageFour = html.split('data-page-index="4"')[1].split('data-page-index="5"')[0];
+  assert.match(pageFour, /class="bento-4"/);
+  assert.deepEqual(four.photos.map(photo => photo.url), original);
+});
