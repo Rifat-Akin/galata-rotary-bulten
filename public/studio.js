@@ -460,7 +460,10 @@ function syncModelFromForms() {
   currentIssue.month = document.getElementById('inp-month')?.value || '';
   currentIssue.year = parseInt(document.getElementById('inp-year')?.value || '2026', 10);
   currentIssue.rotaryMonthTheme = document.getElementById('inp-rotary-month-theme')?.value || '';
-  currentIssue.theme = document.getElementById('inp-period-theme')?.value?.trim() || '';
+  // Missing controls (e.g. local-runtime/legacy test UIs) must not silently
+  // erase the theme and bypass the corporate brand veto.
+  const themeField = document.getElementById('inp-period-theme');
+  if (themeField) currentIssue.theme = themeField.value.trim();
   const monthSpec = MONTH_ENTRIES.find(entry => entry[0] === currentIssue.month);
   if (monthSpec) {
     const start = monthSpec[2] >= 7 ? currentIssue.year : currentIssue.year - 1;
