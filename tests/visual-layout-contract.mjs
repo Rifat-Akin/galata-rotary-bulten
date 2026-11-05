@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {renderIssueToHTML} from '../public/renderer.js';
+import {renderIssueToHTML, resolveLeadPhotoIndex} from '../public/renderer.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const catalog = JSON.parse(fs.readFileSync(path.join(root, 'data/issues/index.json'), 'utf8'));
@@ -194,4 +194,49 @@ test('CDP printer rejects clipped gallery captions, cropped photos and empty med
   assert.match(printer, /Article photo uses a cropping object-fit/);
   assert.match(printer, /Cover index and article count differ/);
   assert.match(printer, /A4 page overflow detected/);
+});
+test('an explicit lead photo wins without reordering archived original photographs', () => {
+  const issue = JSON.parse(fs.readFileSync(
+    path.join(root, 'data/issues/2026-09-eylul.json'), 'utf8'));
+  const article = issue.articles[1];
+  const originalOrder = article.photos.map(photo => photo.url);
+  const editorialDefault = resolveLeadPhotoIndex(article);
+  assert.equal(article.photos[editorialDefault].url.endsWith('00005290.jpg'), true);
+  article.leadPhotoIndex = 0;
+  assert.equal(resolveLeadPhotoIndex(article), 0);
+  const html = renderIssueToHTML(issue);
+  const pageFour = html.split('data-page-index="4"')[1].split('data-page-index="5"')[0];
+  const orderedImages = [...pageFour.matchAll(/<img src="([^"]+)"[^>]*class="bento-img"/g)].map(m => m[1]);
+  assert.equal(orderedImages[0], originalOrder[0]);
+  assert.deepEqual(new Set(orderedImages), new Set(originalOrder));
+  assert.deepEqual(article.photos.map(p => p.url), originalOrder,
+    'editor priority must not change canonical source order');
+  article.leadPhotoIndex = 999;
+  assert.equal(resolveLeadPhotoIndex(article), editorialDefault,
+    'invalid selection uses curated archive default');
+});
+
+test('featured editorial hierarchy is opt-in and safe for original A4 archive', () => {
+  const issue = JSON.parse(fs.readFileSync(
+    path.join(root, 'data/issues/2026-09-eylul.json'), 'utf8'));
+  assert.doesNotMatch(renderIssueToHTML(issue), /article-card\s+story-feature/);
+  issue.articles[0].storyStyle = 'feature';
+  const html = renderIssueToHTML(issue);
+  assert.match(html, /article-card\s+story-feature/);
+  assert.match(block('.article-card.story-feature:not(.compact) .article-title'),
+    /font-size:\s*17pt/);
+  assert.equal(issue.articles[0].photos.length, 2);
+});
+
+test('monthly editor makes story appearance and featured photo controllable', () => {
+  const js = fs.readFileSync(path.join(root, 'public/studio.js'), 'utf8');
+  const css = fs.readFileSync(path.join(root, 'public/styles/studio.css'), 'utf8');
+  assert.match(js, /data-action="set-lead-photo"/);
+  assert.match(js, /data-action="set-story-style"/);
+  assert.match(js, /refreshLeadPhotoButtons\(card, artIdx\)/);
+  assert.match(js, /leadPhotoIndex -= 1/);
+  assert.match(js, /photos\.length >= 4/);
+  assert.match(js, /btn\.disabled = !allowed/);
+  assert.match(css, /photo-lead-btn\[aria-pressed="true"\]/);
+  assert.match(css, /story-style-btn\.active/);
 });
