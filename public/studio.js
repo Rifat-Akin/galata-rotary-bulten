@@ -1173,7 +1173,8 @@ function setupReaderObserver() {
       }
     }
   }, {
-    root: viewport,
+    // Phones scroll the document, whereas desktop uses the preview pane.
+    root: window.matchMedia('(max-width: 900px)').matches ? null : viewport,
     threshold: 0.4
   });
 
