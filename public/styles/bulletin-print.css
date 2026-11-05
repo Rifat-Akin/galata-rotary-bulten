@@ -871,15 +871,45 @@ html, body {
 .single-col {
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
   width: 100%;
-  height: 100%;
+  height: auto;
   min-height: 0;
-  flex: 1 1 0;
+  flex: 0 0 auto;
 }
 
 .single-col .bento-photo-card {
   width: 100%;
-  height: 100%;
+  height: auto;
+  align-self: center;
+  overflow: visible;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.single-col .bento-img {
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: 179mm;
+  flex: 0 0 auto;
+  object-fit: contain;
+  object-position: center;
+  margin-inline: auto;
+  background: transparent;
+}
+/* Two compact stories share one A4 sheet; their media budgets are half-sized.
+   Portrait photos must be scaled to the available card, not spill into the next. */
+.article-card.compact .single-col .bento-img {
+  max-height: 58mm;
+}
+.single-col .bento-caption {
+  margin-top: 2mm;
+  border-top: 0;
+  border-left: 2px solid var(--color-rotary-gold);
+  background: #FFFFFF;
+  padding: 2mm 2.5mm 1.5mm;
 }
 
 /* Layout 2: two-col */
@@ -899,18 +929,18 @@ html, body {
    Actual image aspect ratios and complete captions are always preserved. */
 .editorial-duo {
   display: grid;
-  grid-template-columns: minmax(0, 1.6fr) minmax(0, 0.8fr);
-  align-items: center;
-  align-content: center;
-  gap: 7mm;
+  grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);
+  align-items: start;
+  align-content: start;
+  gap: 5mm;
   width: 100%;
-  height: 100%;
+  height: auto;
   min-height: 0;
-  flex: 1 1 0;
+  flex: 0 0 auto;
 }
 
 .editorial-duo .bento-photo-card {
-  align-self: center;
+  align-self: start;
   height: auto;
   min-width: 0;
   overflow: visible;
@@ -924,19 +954,20 @@ html, body {
   display: block;
   width: 100%;
   height: auto;
-  max-height: 183mm;
+  max-height: 166mm;
   flex: 0 0 auto;
   object-fit: contain;
   object-position: center;
+  margin-inline: auto;
   background: transparent;
 }
 
 .editorial-duo .bento-photo-card:not(:first-child) {
-  transform: translateY(12mm);
+  transform: none;
 }
 
 .editorial-duo .bento-photo-card:not(:first-child) .bento-img {
-  max-height: 103mm;
+  max-height: 131mm;
 }
 
 .editorial-duo .bento-caption {
@@ -954,17 +985,48 @@ html, body {
 /* Layout 3: bento-3 (1 featured + 2 stacked) */
 .bento-3 {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
-  grid-template-rows: repeat(2, minmax(0, 1fr));
-  gap: 3mm;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: max-content max-content;
+  align-content: start;
+  align-items: start;
+  gap: 4mm;
   width: 100%;
-  height: 100%;
+  height: auto;
   min-height: 0;
-  flex: 1 1 0;
+  flex: 0 0 auto;
 }
 
 .bento-3 .bento-photo-card:first-child {
-  grid-row: span 2;
+  grid-row: 1;
+  grid-column: 1 / -1;
+}
+.bento-3 .bento-photo-card {
+  height: auto;
+  align-self: start;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.bento-3 .bento-img {
+  height: auto;
+  max-height: 110mm;
+  flex: 0 0 auto;
+  object-fit: contain;
+  object-position: center;
+  margin-inline: auto;
+  background: transparent;
+}
+.bento-3 .bento-photo-card:not(:first-child) .bento-img {
+  max-height: 75mm;
+}
+.bento-3 .bento-caption {
+  margin-top: 2mm;
+  padding: 2mm 2.5mm 1.5mm;
+  border-top: 0;
+  border-left: 2px solid var(--color-rotary-gold);
+  background: #FFFFFF;
 }
 
 /* Four photos: one wide lead picture above a three-frame filmstrip.
@@ -972,25 +1034,41 @@ html, body {
 .bento-4 {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  grid-template-rows: minmax(0, 1.55fr) minmax(0, 1fr);
+  grid-template-rows: max-content max-content;
+  align-content: start;
+  align-items: start;
   gap: 4mm;
   width: 100%;
-  height: 100%;
+  height: auto;
   min-height: 0;
-  flex: 1 1 0;
+  flex: 0 0 auto;
 }
 
 .bento-4 .bento-photo-card {
+  height: auto;
+  align-self: start;
+  overflow: visible;
   border: 0;
   border-radius: 0;
+  box-shadow: none;
   background: transparent;
 }
 
 .bento-4 .bento-img {
+  height: auto;
+  max-height: 116mm;
+  flex: 0 0 auto;
+  object-fit: contain;
+  object-position: center;
+  margin-inline: auto;
   background: transparent;
+}
+.bento-4 .bento-photo-card:not(:first-child) .bento-img {
+  max-height: 62mm;
 }
 
 .bento-4 .bento-caption {
+  margin-top: 2mm;
   border-top: 0;
   border-left: 2px solid var(--color-rotary-gold);
   background: #FFFFFF;

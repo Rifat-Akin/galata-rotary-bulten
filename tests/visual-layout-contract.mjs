@@ -32,7 +32,7 @@ for (const issueMeta of catalog) {
     const html = renderIssueToHTML(issue, {fullDoc: true});
     const pages = html.match(/<article class="a4-page/g) || [];
     assert.equal(pages.length, issueMeta.pageCount, 'must preserve accepted official pagination');
-    assert.equal(html.includes('styles/bulletin-print.css?v=20261102-photo10'), true,
+    assert.equal(html.includes('styles/bulletin-print.css?v=20261105-mobilepdf12'), true,
       'full-document print CSS must be cache-busted');
     assert.match(html, /class="culture-watermark"/,
       'culture pages must use a clear non-stretched decorative ending');
@@ -59,7 +59,7 @@ test('article photos and book covers do not crop source images', () => {
   assert.doesNotMatch(block('.bento-caption'), /white-space:\s*nowrap/);
   assert.match(block('.bento-caption'), /position:\s*static/);
   for (const cls of ['.single-col', '.editorial-duo', '.bento-3', '.bento-4']) {
-    assert.match(block(cls), /height:\s*100%/, cls + ' must fill the allocated page media area');
+    assert.match(block(cls), /height:\s*auto/, cls + ' avoids padded image boxes and empty filler');
   }
 });
 
@@ -76,10 +76,20 @@ test('September issue 3 page 3 has an asymmetric editorial photo story', () => {
   assert.equal((pageThree.match(/class="bento-img"/g) || []).length, 2);
   assert.ok(pageThree.includes('00005281.jpg'));
   assert.ok(pageThree.includes('00005340.jpg'));
-  assert.match(block('.editorial-duo'), /grid-template-columns:\s*minmax\(0, 1\.6fr\) minmax\(0, 0\.8fr\)/);
+  assert.match(block('.editorial-duo'), /grid-template-columns:\s*minmax\(0, 1\.65fr\) minmax\(0, 1fr\)/);
   assert.match(block('.editorial-duo .bento-photo-card'), /background:\s*transparent/);
   assert.match(block('.editorial-duo .bento-img'), /object-fit:\s*contain/);
   assert.match(block('.editorial-duo .bento-caption'), /overflow-wrap:\s*break-word/);
+  assert.match(block('.editorial-duo'), /align-content:\s*start/);
+  assert.match(block('.editorial-duo .bento-photo-card:not(:first-child)'), /transform:\s*none/);
+  assert.match(block('.bento-3 .bento-photo-card:first-child'), /grid-column:\s*1 \/ -1/);
+  assert.match(block('.bento-4'), /grid-template-rows:\s*max-content max-content/);
+  assert.match(block('.article-card.compact .single-col .bento-img'), /max-height:\s*58mm/,
+    'two stories on one A4 must have half-page photo budgets');
+  for (const sel of ['.single-col .bento-img', '.bento-3 .bento-img', '.bento-4 .bento-img']) {
+    assert.match(block(sel), /height:\s*auto/);
+    assert.match(block(sel), /object-fit:\s*contain/);
+  }
 });
 
 test('studio photo layout selector matches the actual preview and updates as photos change', () => {
@@ -129,16 +139,16 @@ test('typography, culture features and cache version are designed for readable A
   assert.match(block('.announcement-box-content'), /font-size:\s*8\.8pt/);
   assert.match(block('.culture-page-grid .announcements-grid'), /flex:\s*0 0 auto/);
   assert.match(block('.culture-watermark img'), /object-fit:\s*contain/);
-  assert.match(studio, /styles\/bulletin-print\.css\?v=20261102-photo10/);
-  assert.match(studio, /styles\/studio\.css\?v=20261102-ui9/);
+  assert.match(studio, /styles\/bulletin-print\.css\?v=20261105-mobilepdf12/);
+  assert.match(studio, /styles\/studio\.css\?v=20261105-mobilepdf12/);
 });
 
 test('Pages uses cache-versioned modules and officially downloaded PDFs', () => {
   const controller = fs.readFileSync(path.join(root, 'public/studio.js'), 'utf8');
-  const tag = '20261102-photo10';
+  const tag = '20261105-mobilepdf12';
   assert.ok(studio.includes('src="renderer.js?v=' + tag + '"'),
     'renderer module must bypass cached pre-release JavaScript');
-  assert.ok(studio.includes('src="studio.js?v=20261102-photo10"'),
+  assert.ok(studio.includes('src="studio.js?v=20261105-mobilepdf12"'),
     'editor controller must bypass cached pre-release JavaScript');
   assert.ok(controller.includes("const PUBLIC_RELEASE_TAG = '" + tag + "'"),
     'official PDF cache revision should match the visible JavaScript release');
@@ -150,6 +160,10 @@ test('responsive UI includes named touch actions, visible tabs, modal focus, and
   const shell = fs.readFileSync(path.join(root, 'public/styles/studio.css'), 'utf8');
   const controller = fs.readFileSync(path.join(root, 'public/studio.js'), 'utf8');
   assert.match(shell, /Mobile compact action drawer/);
+  assert.match(shell, /Mobile\/tablet: use one natural document scroller/);
+  assert.match(shell, /overflow-y:\s*auto !important/);
+  assert.match(shell, /body:not\(\.mode-reader-active\) \.editor-pane/);
+  assert.match(shell, /\.editor-tabs-bar\s*\{\s*position:\s*sticky/);
   assert.match(shell, /grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/);
   assert.match(shell, /\.zoom-btn-group \.zoom-chip\[data-zoom="1\.0"\]/);
   assert.match(shell, /\.studio-header-actions\.expanded \.mobile-secondary-action/);
@@ -174,7 +188,8 @@ test('desktop split preview toolbar keeps zoom and refresh reachable; reader con
 
 test('CDP printer rejects clipped gallery captions, cropped photos and empty media area', () => {
   assert.match(printer, /Visual layout acceptance failed/);
-  assert.match(printer, /Article gallery leaves most of its page blank/);
+  assert.match(printer, /Article gallery contains uncentered or invalid photo frames/);
+  assert.match(printer, /Article gallery photo row edges are misaligned/);
   assert.match(printer, /A photo caption is visibly clipped/);
   assert.match(printer, /Article photo uses a cropping object-fit/);
   assert.match(printer, /Cover index and article count differ/);

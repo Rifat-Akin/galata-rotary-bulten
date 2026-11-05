@@ -20,7 +20,7 @@ let overflowCycleIndex = 0;
 
 // Asset release token: PDF downloads must not reuse a stale browser cache
 // after a new GitHub Pages publish. Keep synced with the module URLs in index.html.
-const PUBLIC_RELEASE_TAG = '20261102-photo10';
+const PUBLIC_RELEASE_TAG = '20261105-mobilepdf12';
 
 // Official Pre-Rendered PDF Mapping
 const ISSUE_PDF_MAP = {
@@ -1173,7 +1173,9 @@ function setupReaderObserver() {
       }
     }
   }, {
-    root: viewport,
+    // Phones scroll the document, whereas desktop uses the preview pane.
+    root: (typeof window.matchMedia === 'function' &&
+      window.matchMedia('(max-width: 900px)').matches) ? null : viewport,
     threshold: 0.4
   });
 

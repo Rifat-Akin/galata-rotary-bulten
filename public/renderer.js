@@ -723,7 +723,7 @@ export function renderIssueToHTML(issue, options = {}) {
   }
 
   const docTitle = options.title || `Galata Rotary Kulübü Bülteni - ${issue.month || ''} ${issue.year || 2026} (Sayı ${issue.issueNumber || 1})`;
-  const printCssUrl = resolveUrl('styles/bulletin-print.css?v=20261102-photo10', prefix);
+  const printCssUrl = resolveUrl('styles/bulletin-print.css?v=20261105-mobilepdf12', prefix);
 
   return `<!DOCTYPE html>
 <html lang="tr">

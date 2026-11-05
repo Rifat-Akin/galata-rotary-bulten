@@ -1686,3 +1686,54 @@ body.mode-reader-active .a4-page {
   }
   body.mode-reader-active #btn-refresh-preview { flex: 0 0 auto; }
 }
+/* Mobile/tablet: use one natural document scroller. The former hidden root
+   overflow and a fixed 64px header budget trapped controls below the fold. */
+@media screen and (max-width: 900px) {
+  html, body {
+    height: auto !important;
+    min-height: 100% !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+  }
+  .studio-workspace {
+    display: block;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+  body:not(.mode-reader-active) .editor-pane {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    flex: none !important;
+    overflow: visible !important;
+  }
+  .editor-scroll-area {
+    flex: none !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding-bottom: max(64px, env(safe-area-inset-bottom));
+  }
+  .editor-tabs-bar {
+    position: sticky;
+    top: 0;
+    z-index: 35;
+    background: #F8FAFC;
+  }
+  .editor-section, .article-card-item { scroll-margin-top: 105px; }
+  body.mode-reader-active .preview-pane {
+    height: auto !important;
+    min-height: 0 !important;
+    flex: none !important;
+    overflow: visible !important;
+  }
+  body.mode-reader-active .preview-viewport {
+    height: auto !important;
+    min-height: 0 !important;
+    flex: none !important;
+    overflow-x: auto !important; /* retain 100% zoom horizontal panning */
+    overflow-y: visible !important; /* auto-height avoids nested vertical traps */
+    -webkit-overflow-scrolling: touch;
+  }
+}
