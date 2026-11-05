@@ -246,11 +246,22 @@ function validateIssue(filename) {
       if (!art.title || !art.summary || !art.layout) {
         errors.push(`Haber #${idx + 1} (${art.id || 'isimsiz'}) Eksik Bilgi: title, summary veya layout eksik`);
       }
-      const allowedLayouts = ['single-col', 'two-col', 'bento-3', 'bento-4'];
+      const allowedLayouts = ['single-col', 'two-col', 'editorial-duo', 'bento-3', 'bento-4'];
       if (!allowedLayouts.includes(art.layout)) {
         errors.push(`Haber #${idx + 1} Geçersiz Layout: "${art.layout}". İzin verilenler: ${allowedLayouts.join(', ')}`);
       }
+      if (art.storyStyle !== undefined && !['standard', 'feature'].includes(art.storyStyle)) {
+        errors.push(`Haber #${idx + 1}: Geçersiz haber sunumu "${art.storyStyle}"`);
+      }
       if (Array.isArray(art.photos)) {
+        if (art.photos.length > 4) {
+          errors.push(`Haber #${idx + 1}: Bir haberde en fazla dört fotoğraf destekleniyor`);
+        }
+        if (art.leadPhotoIndex !== undefined &&
+            (!Number.isInteger(art.leadPhotoIndex) || art.leadPhotoIndex < 0 ||
+            art.leadPhotoIndex >= art.photos.length)) {
+          errors.push(`Haber #${idx + 1}: Geçersiz ana fotoğraf seçimi`);
+        }
         art.photos.forEach((ph, pIdx) => {
           const phPath = resolveAssetPath(ph.url);
           if (!phPath || !fs.existsSync(phPath)) {

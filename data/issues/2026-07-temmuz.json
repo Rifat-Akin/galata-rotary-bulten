@@ -35,6 +35,7 @@
   "articles": [
     {
       "id": "art-01",
+      "storyStyle": "feature",
       "category": "Kulüp Toplantısı",
       "date": "6 Temmuz 2026",
       "title": "Dönemimizin 1., Kulübümüzün 1008. Toplantısı Gerçekleştirildi",

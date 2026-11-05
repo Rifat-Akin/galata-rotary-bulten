@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {renderIssueToHTML} from '../public/renderer.js';
+import {renderIssueToHTML, resolveLeadPhotoIndex} from '../public/renderer.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const catalog = JSON.parse(fs.readFileSync(path.join(root, 'data/issues/index.json'), 'utf8'));
@@ -32,7 +32,7 @@ for (const issueMeta of catalog) {
     const html = renderIssueToHTML(issue, {fullDoc: true});
     const pages = html.match(/<article class="a4-page/g) || [];
     assert.equal(pages.length, issueMeta.pageCount, 'must preserve accepted official pagination');
-    assert.equal(html.includes('styles/bulletin-print.css?v=20261105-mobilepdf12'), true,
+    assert.equal(html.includes('styles/bulletin-print.css?v=20261105-editorial14'), true,
       'full-document print CSS must be cache-busted');
     assert.match(html, /class="culture-watermark"/,
       'culture pages must use a clear non-stretched decorative ending');
@@ -139,16 +139,16 @@ test('typography, culture features and cache version are designed for readable A
   assert.match(block('.announcement-box-content'), /font-size:\s*8\.8pt/);
   assert.match(block('.culture-page-grid .announcements-grid'), /flex:\s*0 0 auto/);
   assert.match(block('.culture-watermark img'), /object-fit:\s*contain/);
-  assert.match(studio, /styles\/bulletin-print\.css\?v=20261105-mobilepdf12/);
-  assert.match(studio, /styles\/studio\.css\?v=20261105-mobilepdf12/);
+  assert.match(studio, /styles\/bulletin-print\.css\?v=20261105-editorial14/);
+  assert.match(studio, /styles\/studio\.css\?v=20261105-editorial14/);
 });
 
 test('Pages uses cache-versioned modules and officially downloaded PDFs', () => {
   const controller = fs.readFileSync(path.join(root, 'public/studio.js'), 'utf8');
-  const tag = '20261105-mobilepdf12';
+  const tag = '20261105-editorial14';
   assert.ok(studio.includes('src="renderer.js?v=' + tag + '"'),
     'renderer module must bypass cached pre-release JavaScript');
-  assert.ok(studio.includes('src="studio.js?v=20261105-pdf13"'),
+  assert.ok(studio.includes('src="studio.js?v=20261105-editorial14"'),
     'editor controller must bypass cached pre-release JavaScript');
   assert.ok(controller.includes("const PUBLIC_RELEASE_TAG = '" + tag + "'"),
     'official PDF cache revision should match the visible JavaScript release');
@@ -194,4 +194,76 @@ test('CDP printer rejects clipped gallery captions, cropped photos and empty med
   assert.match(printer, /Article photo uses a cropping object-fit/);
   assert.match(printer, /Cover index and article count differ/);
   assert.match(printer, /A4 page overflow detected/);
+});
+test('an explicit lead photo wins without reordering archived original photographs', () => {
+  const issue = JSON.parse(fs.readFileSync(
+    path.join(root, 'data/issues/2026-09-eylul.json'), 'utf8'));
+  const article = issue.articles[1];
+  const originalOrder = article.photos.map(photo => photo.url);
+  const editorialDefault = resolveLeadPhotoIndex(article);
+  assert.equal(article.photos[editorialDefault].url.endsWith('00005290.jpg'), true);
+  article.leadPhotoIndex = 0;
+  assert.equal(resolveLeadPhotoIndex(article), 0);
+  const html = renderIssueToHTML(issue);
+  const pageFour = html.split('data-page-index="4"')[1].split('data-page-index="5"')[0];
+  const orderedImages = [...pageFour.matchAll(/<img src="([^"]+)"[^>]*class="bento-img"/g)].map(m => m[1]);
+  assert.equal(orderedImages[0], originalOrder[0]);
+  assert.deepEqual(new Set(orderedImages), new Set(originalOrder));
+  assert.deepEqual(article.photos.map(p => p.url), originalOrder,
+    'editor priority must not change canonical source order');
+  article.leadPhotoIndex = 999;
+  assert.equal(resolveLeadPhotoIndex(article), editorialDefault,
+    'invalid selection uses curated archive default');
+});
+
+test('featured editorial hierarchy is opt-in and safe for original A4 archive', () => {
+  const issue = JSON.parse(fs.readFileSync(
+    path.join(root, 'data/issues/2026-09-eylul.json'), 'utf8'));
+  const original = structuredClone(issue);
+  delete original.articles[4].storyStyle;
+  assert.doesNotMatch(renderIssueToHTML(original), /article-card\s+story-feature/);
+  assert.equal(issue.articles[4].storyStyle, 'feature');
+  issue.articles[0].storyStyle = 'feature';
+  const html = renderIssueToHTML(issue);
+  assert.match(html, /article-card\s+story-feature/);
+  assert.match(block('.article-card.story-feature:not(.compact) .article-title'),
+    /font-size:\s*17pt/);
+  assert.equal(issue.articles[0].photos.length, 2);
+});
+
+test('monthly editor makes story appearance and featured photo controllable', () => {
+  const js = fs.readFileSync(path.join(root, 'public/studio.js'), 'utf8');
+  const css = fs.readFileSync(path.join(root, 'public/styles/studio.css'), 'utf8');
+  assert.match(js, /data-action="set-lead-photo"/);
+  assert.match(js, /data-action="set-story-style"/);
+  assert.match(js, /refreshLeadPhotoButtons\(card, artIdx\)/);
+  assert.match(js, /leadPhotoIndex -= 1/);
+  assert.match(js, /photos\.length >= 4/);
+  assert.match(js, /btn\.disabled = !allowed/);
+  assert.match(css, /photo-lead-btn\[aria-pressed="true"\]/);
+  assert.match(css, /story-style-btn\.active/);
+});
+
+test('stale imported grid hints cannot force an overflowing multi-photo column', () => {
+  const issue = JSON.parse(fs.readFileSync(
+    path.join(root, 'data/issues/2026-09-eylul.json'), 'utf8'));
+  const four = issue.articles[1];
+  const original = four.photos.map(photo => photo.url);
+  four.layout = 'single-col'; // obsolete imported draft state
+  const html = renderIssueToHTML(issue);
+  const pageFour = html.split('data-page-index="4"')[1].split('data-page-index="5"')[0];
+  assert.match(pageFour, /class="bento-4"/);
+  assert.deepEqual(four.photos.map(photo => photo.url), original);
+});
+
+test('one distinct lead story per issue adds magazine rhythm without editing narratives', () => {
+  for (const id of ['2026-07-temmuz','2026-08-agustos','2026-09-eylul','2026-10-ekim']) {
+    const issue = JSON.parse(fs.readFileSync(path.join(root, 'data/issues', id + '.json'), 'utf8'));
+    assert.equal(issue.articles.filter(art => art.storyStyle === 'feature').length, 1, id);
+    const html = renderIssueToHTML(issue);
+    assert.match(html, /article-card\s+story-feature/, id);
+    const bare = structuredClone(issue);
+    for (const article of bare.articles) delete article.storyStyle;
+    assert.equal(html.includes('class="bento-img"'), renderIssueToHTML(bare).includes('class="bento-img"'));
+  }
 });
