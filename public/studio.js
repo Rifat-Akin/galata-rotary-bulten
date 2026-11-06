@@ -315,7 +315,8 @@ async function loadIssuesList(selectedId = null) {
 
     // 3. Built-in hardcoded fallback if static index is missing
     if (!issues || !Array.isArray(issues) || issues.length === 0) {
-      issues = FALLBACK_ISSUES_CATALOG;
+      // The fallback constant is immutable reference data; never append drafts to it.
+      issues = FALLBACK_ISSUES_CATALOG.map(item => ({...item}));
     }
   }
 
@@ -1494,6 +1495,9 @@ async function restoreJsonBackup(file) {
     return false;
   }
   if (current) downloadJSON(current, issue.id + '-onceki-taslak-yedek.json');
+  // Cancel any pending old-issue autosave before overwriting the chosen draft.
+  clearTimeout(draftAutoSaveTimer);
+  ++draftAutoSaveGeneration;
   await saveStoredDraft(issue); // writes only to this browser, never to GitHub
   const verified = await readStoredDraft(issue.id);
   if (JSON.stringify(verified) !== JSON.stringify(issue)) {
@@ -1567,14 +1571,17 @@ async function saveCurrentIssue() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Kaydetme işlemi başarısız.');
       hasUnsavedChanges = false;
-      // A recovered offline draft is no longer pending after a verified server save.
+      // A successful server PUT must also retire the verified IndexedDB copy:
+      // otherwise selectIssue would silently resurrect stale local content.
       try {
-        localStorage.removeItem('galata_issue_' + currentIssue.id);
-        localStorage.removeItem('galata_issue_timestamp_' + currentIssue.id);
+        await removeStoredDraft(currentIssue.id);
+        showToast('Bülten yerel sunucuya kaydedildi; eski tarayıcı taslağı temizlendi.', 'success');
       } catch (storageErr) {
-        console.warn('Eski tarayıcı taslağı temizlenemedi:', storageErr.message);
+        // Server write already succeeded. Never claim it failed or re-stage an
+        // older draft as a new offline PUT. Surface incomplete cache cleanup.
+        console.warn('Sunucu kaydı başarılı; eski cihaz taslağı temizlenemedi:', storageErr.message);
+        showToast('Sunucu kaydı başarılı, ancak eski cihaz taslağı silinemedi. JSON yedeği alıp cihaz depolamasını kontrol edin.', 'error');
       }
-      showToast('Bülten yerel sunucudaki JSON dosyasına kaydedildi.', 'success');
       renderLivePreview();
       return 'server';
     } catch (err) {
