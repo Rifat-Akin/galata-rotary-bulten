@@ -1751,7 +1751,7 @@ async function syncWithRotaClub() {
 function readImageAsDataUrl(file) {
   return new Promise(async (resolve, reject) => {
     if (!/^image\/(?:jpeg|png|webp)$/.test(file.type) || file.size > 6 * 1024 * 1024) {
-      reject(new Error('Lütfen JPEG, PNG veya WebP fotoğraf seçin (en çok 6 MiB).'));
+      reject(new Error('Lütfen geçerli bir görsel dosyası seçin (JPEG, PNG, WebP, en çok 6 MiB).'));
       return;
     }
     // Optimize only user-uploaded images. Local/archived source files are never
