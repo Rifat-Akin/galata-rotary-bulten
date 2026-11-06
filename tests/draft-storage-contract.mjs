@@ -24,6 +24,15 @@ test('drafts never delete older localStorage data before read-back',()=>{
   assert.match(studio,/restoreJsonBackup\(file\)/);
   assert.match(studio,/downloadJSON\(current, issue\.id \+ '-onceki-taslak-yedek\.json'\)/);
 });
+test('newer browser fallback is never shadowed by an old IndexedDB record',()=>{
+  const studio=file('public/studio.js');
+  assert.match(studio,/const newerFallback = legacy && localStorage\.getItem\('galata_issue_fallback_' \+ id\)/);
+  assert.match(studio,/const record = newerFallback \? null : await db\.get\(id\)/);
+  assert.match(studio,/localStorage\.setItem\('galata_issue_fallback_' \+ issue\.id, '1'\)/);
+  assert.match(studio,/clearLegacyDraft\(issue\.id\)/);
+  assert.match(studio,/await removeStoredDraft\(currentIssue\.id\)/);
+});
+
 test('new monthly issue PDF stays separate from indexed storage',()=>{
   const index=file('public/index.html');
   const pdf=file('public/pdf-download.js');
