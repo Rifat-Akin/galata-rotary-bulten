@@ -11,6 +11,7 @@ let availableIssues = [];
 let renderDebounceTimer = null;
 let draftAutoSaveTimer = null;
 let draftAutoSaveGeneration = 0;
+let issueSelectionGeneration = 0;
 let currentZoom = 0.75; // Default 75% zoom
 let isFitMode = true;
 let activeRuntimeMode = 'local'; // 'local' or 'static'
@@ -371,7 +372,12 @@ async function loadIssuesList(selectedId = null) {
  * In static mode: checks localStorage first, then fetches data/issues/${id}.json.
  */
 async function selectIssue(issueId) {
+  // Selecting a second issue supersedes every earlier in-flight IDB/HTTP
+  // read. Otherwise a late previous-month response can replace the editor
+  // while the dropdown still shows the newly selected issue.
+  const selectionToken = ++issueSelectionGeneration;
   clearTimeout(draftAutoSaveTimer);
+  clearTimeout(renderDebounceTimer);
   ++draftAutoSaveGeneration;
   invalidatePdfReadyLink();
   try {
@@ -381,6 +387,7 @@ async function selectIssue(issueId) {
     // In particular, a previous offline PUT failure must not be hidden by a
     // later successful GET returning the older server copy.
     const localDraft = await readStoredDraft(issueId);
+    if (selectionToken !== issueSelectionGeneration) return;
     if (localDraft) {
       issueData = localDraft;
       showToast('Bu cihazda kayıtlı bülten taslağı geri açıldı. Başka cihaz için JSON yedeği alın.', 'info');
@@ -396,6 +403,7 @@ async function selectIssue(issueId) {
       }
     }
 
+    if (selectionToken !== issueSelectionGeneration) return;
     if (!issueData) {
       const staticUrl = resolveAppPath(`data/issues/${issueId}.json`);
       const res = await fetch(staticUrl);
@@ -403,6 +411,14 @@ async function selectIssue(issueId) {
       issueData = await res.json();
     }
 
+    if (selectionToken !== issueSelectionGeneration) return;
+    if (!issueData || issueData.id !== issueId) {
+      throw new Error('İstenen sayıyla yüklenen bülten kimliği uyuşmuyor.');
+    }
+    const selector = document.getElementById('issue-select');
+    if (selector && [...selector.options].some(option => option.value === issueId)) {
+      selector.value = issueId;
+    }
     currentReaderPage = 1;
     updateReaderPageIndicator(1);
     const jumpSelect = document.getElementById('reader-page-jump-select');
@@ -415,6 +431,7 @@ async function selectIssue(issueId) {
     populateFormsFromModel();
     renderLivePreview();
   } catch (err) {
+    if (selectionToken !== issueSelectionGeneration) return;
     showToast(`Bülten verisi yüklenirken hata oluştu: ${err.message}`, 'error');
   }
 }
