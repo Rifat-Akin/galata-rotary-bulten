@@ -485,7 +485,12 @@ function renderCulturePage(issue, pageNum, totalPages, options) {
   const prefix = options.assetPrefix || '';
   const culture = issue.culture || {};
   const book = culture.book || {};
-  const bookCoverUrl = resolveUrl(book.cover || '', prefix);
+  // A new month's book recommendation is legitimately blank. Do not emit
+  // src="" (it resolves to the current page URL and blocks local PDF export).
+  // Show a neutral, bundled emblem until the editor adds a real book cover.
+  const hasBookCover = typeof book.cover === 'string' && book.cover.trim().length > 0;
+  const bookCoverUrl = resolveUrl(
+    hasBookCover ? book.cover : 'assets/brand/galata-silhouette.svg', prefix);
 
   // Context-aware announcements based on month
   let announcementsHTML = '';
@@ -589,7 +594,7 @@ function renderCulturePage(issue, pageNum, totalPages, options) {
       <div class="culture-page-grid">
         <!-- Culture Book Card -->
         <section class="culture-book-card">
-          <img src="${bookCoverUrl}" alt="${escapeHTML(book.title || 'Kitap Kapağı')}" class="book-cover-img" onerror="this.style.display='none'" />
+          <img src="${bookCoverUrl}" alt="${escapeHTML(hasBookCover ? (book.title || 'Kitap Kapağı') : 'Galata Kültür Köşesi')}" class="book-cover-img${hasBookCover ? '' : ' book-cover-placeholder'}" onerror="this.style.display='none'" />
           <div class="book-details">
             <span class="book-tag">Galata Kültür Köşesi • Ayın Kitap Önerisi</span>
             <h2 class="book-title">${escapeHTML(book.title || 'Galata Kitap Seçkisi')}</h2>
