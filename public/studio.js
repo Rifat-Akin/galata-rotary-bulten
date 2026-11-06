@@ -1492,6 +1492,16 @@ async function restoreJsonBackup(file) {
         !Array.isArray(art.photos) || art.photos.length > 4)) {
     throw new Error('Bu dosya geçerli bir Bülten Stüdyosu yedeği değil.');
   }
+  // A mismatched ID/month/year silently changes PDF filenames and can
+  // mislabel an official archive. Reject rather than auto-correct imported data.
+  const idParts = /^([0-9]{4})-([0-9]{2})-([a-z0-9-]+)$/.exec(issue.id);
+  const monthEntry = MONTH_ENTRIES.find(entry => entry[0] === issue.month);
+  const startYear = (monthEntry?.[2] >= 7) ? Number(issue.year) : Number(issue.year) - 1;
+  if (!idParts || !monthEntry || Number(idParts[1]) !== Number(issue.year) ||
+      Number(idParts[2]) !== monthEntry[2] || idParts[3] !== monthEntry[1] ||
+      issue.rotaryYear !== startYear + '-' + (startYear + 1)) {
+    throw new Error('Yedekteki ay, yıl ve Rotary dönemi bilgileri birbiriyle uyuşmuyor.');
+  }
   validateIssueBeforeSave(issue);
   if (hasUnsavedChanges && !confirm('Açık sayıdaki kaydedilmemiş değişiklikleri bırakıp yedeği açmak istiyor musunuz?')) {
     return false;
@@ -2090,11 +2100,17 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       clearTimeout(draftAutoSaveTimer);
       ++draftAutoSaveGeneration;
-      try { await removeStoredDraft(currentIssue.id); }
+      const removedId = currentIssue.id;
+      const wasLocalOnly = availableIssues.some(item => item.id === removedId && item.localDraft);
+      try { await removeStoredDraft(removedId); }
       catch (err) { showToast('Taslak silinemedi: ' + err.message, 'error'); return; }
-      showToast('Yerel değişiklikler temizlendi, orijinal bülten yükleniyor...', 'info');
-      await selectIssue(currentIssue.id);
-      await loadIssuesList(currentIssue.id);
+      // A newly created month has no static archive to reload after deletion.
+      // Return to a known official issue instead of showing a broken 404 page.
+      const fallbackId = wasLocalOnly ? '2026-09-eylul' : removedId;
+      showToast(wasLocalOnly
+        ? 'Yerel sayı taslağı kaldırıldı; arşiv sayısına dönülüyor.'
+        : 'Yerel değişiklikler temizlendi; arşivden yeniden açılıyor.', 'info');
+      await loadIssuesList(fallbackId);
     }
   });
 
