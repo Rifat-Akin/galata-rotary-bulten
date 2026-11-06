@@ -1067,6 +1067,65 @@ async function runEmpiricalChallengeSuite() {
       assert('Live Title Sync: Card header preview synchronizes instantaneously', titleSyncResult?.previewText === 'Rotary Barış Konferansı 2026', titleSyncResult?.previewText);
 
       
+      // Real IndexedDB round-trip, migration foundation and cleanup.
+      const durableDraftResult = await session.eval(`(async () => {
+        const id = '2099-11-kasim';
+        const source = await fetch('/data/issues/2026-09-eylul.json').then(r => r.json());
+        const draft = {...source, id, month:'Kasım', year:2099, issueNumber:27,
+          articles:[], culture:{book:{},announcements:[]}};
+        try {
+          await globalThis.GalataDraftStore.put(draft);
+          const back = await globalThis.GalataDraftStore.get(id);
+          const inList = (await globalThis.GalataDraftStore.list()).some(x => x.id === id);
+          return {stored:back?.id === id, inList, bytes:JSON.stringify(back).length};
+        } finally {
+          await globalThis.GalataDraftStore.remove(id);
+        }
+      })()`);
+      assert('IndexedDB persists, reads, lists and removes a synthetic issue in Chrome',
+        durableDraftResult?.stored === true &&
+        durableDraftResult?.inList === true &&
+        durableDraftResult?.bytes > 100,
+        JSON.stringify(durableDraftResult));
+
+      // Actual JSON import through the user-facing file field; verify the
+      // selected issue, restored contents, IndexedDB copy and no remote PUT.
+      const importedBackup = await session.eval(`(async () => {
+        const id = '2099-11-kasim';
+        const src = await fetch('/data/issues/2026-09-eylul.json').then(r=>r.json());
+        const text = 'SENTETİK_YEDEK_GERI_YUKLEME';
+        const backup = {...src,id,month:'Kasım',year:2099,rotaryYear:'2099-2100',issueNumber:27,
+          articles:[],presidentMessage:{...src.presidentMessage,title:text},
+          culture:{title:'Galata Kültür Köşesi',announcements:[],book:{title:'',author:'',cover:'',summary:''}}};
+        const confirmOriginal = window.confirm;
+        window.confirm=()=>true;
+        try {
+          const file = new File([JSON.stringify(backup)],id+'.json',{type:'application/json'});
+          const dt = new DataTransfer();
+          dt.items.add(file);
+          const input = document.getElementById('inp-import-json');
+          input.files=dt.files;
+          input.dispatchEvent(new Event('change',{bubbles:true}));
+          let selected=false;
+          for(let i=0;i<35;i++){
+            await new Promise(r=>setTimeout(r,100));
+            selected=document.getElementById('issue-select')?.value===id &&
+              document.getElementById('inp-president-title')?.value===text;
+            if(selected) break;
+          }
+          const verified=await globalThis.GalataDraftStore.get(id);
+          return {selected,stored:verified?.presidentMessage?.title===text,
+            oldOctoberLeaked:JSON.stringify(verified?.culture?.announcements).includes('30 Ekim')};
+        } finally {
+          window.confirm=confirmOriginal;
+          await globalThis.GalataDraftStore.remove(id);
+        }
+      })()`);
+      assert('JSON İçe Aktar restores user data into a locally selectable draft',
+        importedBackup?.selected === true && importedBackup?.stored === true &&
+        importedBackup?.oldOctoberLeaked === false,
+        JSON.stringify(importedBackup));
+
       // A real browser must be able to build an unpublished, freshly edited
       // A4 PDF Blob from source JSON. No cloud PDF backend or print dialog.
       const exportResult = await session.eval(`(async () => {

@@ -52,7 +52,7 @@ Tüm bültenler 7–9 sayfa A4 formatında, baskıya uygun, vektörel tipografi,
    - Sağ panel & Tam Ekran Okuyucu Modu: Birebir A4 (`210mm × 297mm`) ölçekli canlı önizleme, klavye kısayolları (`←`/`→`, `PageUp`/`PageDown`), `Ctrl + Fare Tekerleği` ile akıcı yakınlaştırma (`%40`–`%200`), küçük sayfa şeridi ve mobil/tablet sekme görünümü.
 2. **Çift Çalışma Modu (Dual Runtime: Yerel REST API + GitHub Pages Statik Mod)**:
    - Yerel sunucuda (`http://localhost:3420`) tam REST API kayıt, fotoğraf yükleme ve tek tıkla Headless Chrome PDF derleme.
-   - GitHub Pages canlı statik ortamda `data/issues/index.json` kataloğu, `localStorage` taslak koruma, yeni ay için yerel taslak ve JSON yedeği vardır. **PDF İndir**, değiştirilmemiş arşiv PDF'sini doğrudan indirir; yeni/düzenlenen sayılarda ise yüksek çözünürlüklü A4 PDF'yi **tamamen tarayıcıda oluşturup indirilebilir dosya** hâline getirir. Çıktı GitHub'a gönderilmez. iOS Safari otomatik indirmeyi engellerse ekranda **Hazır PDF · İndir** bağlantısı kalır.
+   - GitHub Pages canlı statik ortamda `data/issues/index.json` kataloğu, **IndexedDB tabanlı kalıcı ve otomatik taslak kaydı** (desteklenmeyen tarayıcılarda `localStorage` yedeği), `JSON İndir` ve **JSON İçe Aktar** ile yeniden yükleme vardır. Eski `localStorage` taslakları yeni depoya başarıyla yazılıp geri okunmadan silinmez. JPEG/PNG/WebP fotoğraflar tarayıcıda en fazla 1920 px boyuta indirilerek kalite/alan dengesi korunur. **PDF İndir**, değiştirilmemiş arşiv PDF'sini doğrudan indirir; yeni/düzenlenen sayılarda ise yüksek çözünürlüklü A4 PDF'yi **tamamen tarayıcıda oluşturup indirilebilir dosya** hâline getirir. Çıktı GitHub'a gönderilmez. iOS Safari otomatik indirmeyi engellerse ekranda **Hazır PDF · İndir** bağlantısı kalır.
 3. **Gerçek Zamanlı 297mm A4 Taşma Tespiti (Multi-Page Overflow Detection)**:
    - Metin veya asenkron yüklenen fotoğraflar 297mm A4 sınırını (`.page-inner` dahil) aştığında anında uyarır ve taşan sayfalar arasında ardışık geçiş sağlar.
 4. **Dinamik Bento Fotoğraf Izgaraları**:
@@ -191,3 +191,12 @@ Kaynak kod için `LICENSE` dosyasındaki MIT hükümleri geçerlidir. Kurumsal R
 ### Editoryal çeşitlilik ve fotoğraf sıralaması — 5 Kasım 2026
 
 Her haberde **Standart Haber** veya **Öne Çıkan Haber** sunumu seçilebilir. Birden fazla fotoğraflı haberde **Ana görsel yap** ile büyük baskı fotoğrafı belirlenir; özgün fotoğraf sırası ve açıklamaları korunur. Fotoğraf sayısına uymayan mizanpajlar pasiftir; tek bir haber en fazla dört fotoğraf içerir (fazlası ayrı habere ayrılır). Özel sunumlar yeni/düzenlenen yerel taslaklarda önizleme ve **PDF İndir** çıktısına yansır. Resmî arşiv JSON'ları bu değişiklikle dönüştürülmez.
+
+
+### Aylık taslak güvenliği ve metinli PDF — 5 Kasım 2026
+
+- **Kaydet** / otomatik kayıt: Taslak değişiklikten yaklaşık 2,4 saniye sonra bu cihazın IndexedDB alanına yazılır. Sadece aynı tarayıcı/orijinde erişilebilir; bulut senkronizasyonu, yetkilendirme ve bülten yayımlama yoktur.
+- **JSON İndir**: Tüm düzenlenebilir içerik ve gömülü yüklenmiş fotoğraflarla taşınabilir yedek verir. **JSON İçe Aktar** doğrulanmış yedeği geri açar; aynı ID'de bir taslak varsa onay ister ve eski taslağı indirmeyi dener.
+- **Fotoğraf optimizasyonu**: Yeni yüklenen 6 MiB altı JPEG/PNG/WebP fotoğrafları maksimum 1920 piksel ve WebP 0,84 kalite ile cihazda küçültebilir. Fotoğrafın orijinal dosyası değiştirilmez; daha önceki arşiv medya dosyalarına dokunulmaz.
+- **PDF İndir**: Doğrudan dosyadır ve yüksek çözünürlüklü görüntü tabanlıdır. Seçilebilir/aranabilir metin içeren PDF istiyorsanız **Metinli PDF / Yazdır → PDF olarak kaydet** seçeneğini kullanın. Bu baskı yolunun çıktı kalitesi tarayıcının PDF motoruna bağlıdır; arka plan grafikleri açık olmalıdır.
+- **Kurtarma:** Özel gezinti modunda veya tarayıcı verileri temizlendiğinde bu cihazdaki taslak kaybolabilir. JSON yedeğini ayrıca saklayın. Bir taslağı sıfırlamadan önce varsa otomatik olarak JSON yedeği indirilir.

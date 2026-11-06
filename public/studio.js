@@ -9,6 +9,8 @@ let currentIssue = null;
 let hasUnsavedChanges = false;
 let availableIssues = [];
 let renderDebounceTimer = null;
+let draftAutoSaveTimer = null;
+let draftAutoSaveGeneration = 0;
 let currentZoom = 0.75; // Default 75% zoom
 let isFitMode = true;
 let activeRuntimeMode = 'local'; // 'local' or 'static'
@@ -176,6 +178,107 @@ function showToast(message, type = 'info') {
   }, 4000);
 }
 
+// IndexedDB is the primary on-device store for large image-backed drafts.
+// A strictly verified fallback preserves older localStorage-only browsers.
+function readLegacyDraft(id) {
+  try {
+    const raw = localStorage.getItem('galata_issue_' + id);
+    if (!raw) return null;
+    const obj = JSON.parse(raw);
+    return obj?.id === id && Array.isArray(obj.articles) ? obj : null;
+  } catch (error) {
+    console.warn('Eski taslak okunamadı:', id, error.message);
+    return null;
+  }
+}
+
+function clearLegacyDraft(id) {
+  localStorage.removeItem('galata_issue_' + id);
+  localStorage.removeItem('galata_issue_timestamp_' + id);
+  localStorage.removeItem('galata_issue_fallback_' + id);
+}
+
+async function readStoredDraft(id) {
+  const legacy = readLegacyDraft(id);
+  const db = globalThis.GalataDraftStore;
+  if (!db) return legacy;
+  try {
+    // If the last IndexedDB write failed, its older copy must NOT obscure the
+    // newer localStorage fallback. Re-migrate only after verified readback.
+    const newerFallback = legacy && localStorage.getItem('galata_issue_fallback_' + id);
+    const record = newerFallback ? null : await db.get(id);
+    if (record?.id === id && Array.isArray(record.articles)) return record;
+    if (legacy) {
+      await db.put(legacy);
+      const verified = await db.get(id);
+      if (JSON.stringify(verified) === JSON.stringify(legacy)) {
+        clearLegacyDraft(id);
+        return verified;
+      }
+    }
+  } catch (err) {
+    console.warn('IndexedDB taslağı okunamadı; eski taslak korunuyor:', err.message);
+  }
+  return legacy;
+}
+
+async function listStoredDrafts() {
+  const byId = new Map();
+  const db = globalThis.GalataDraftStore;
+  if (db) {
+    try {
+      for (const draft of await db.list()) {
+        if (draft?.id && Array.isArray(draft.articles)) byId.set(draft.id, draft);
+      }
+    } catch (err) {
+      console.warn('IndexedDB taslak listesi okunamadı:', err.message);
+    }
+  }
+  // Include unmigrated drafts from older versions; prefer verified DB data.
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (!key || !/^galata_issue_[0-9]{4}-[0-9]{2}-[a-z0-9-]+$/.test(key)) continue;
+    const id = key.slice('galata_issue_'.length);
+    if (!byId.has(id) || localStorage.getItem('galata_issue_fallback_' + id)) {
+      const item = readLegacyDraft(id);
+      if (item) byId.set(id, item);
+    }
+  }
+  return [...byId.values()];
+}
+
+async function saveStoredDraft(issue) {
+  const db = globalThis.GalataDraftStore;
+  if (db) {
+    try {
+      await db.put(issue);
+      const readBack = await db.get(issue.id);
+      if (JSON.stringify(readBack) !== JSON.stringify(issue)) {
+        throw new Error('Kaydedilen taslak geri okunamadı');
+      }
+      // Only retire old or fallback copies after exact readback succeeds.
+      clearLegacyDraft(issue.id);
+      return 'indexeddb';
+    } catch (err) {
+      console.warn('IndexedDB yazma başarısız, localStorage deneniyor:', err.message);
+    }
+  }
+  localStorage.setItem('galata_issue_' + issue.id, JSON.stringify(issue, null, 2));
+  localStorage.setItem('galata_issue_timestamp_' + issue.id, new Date().toISOString());
+  // Mark precedence explicitly so a stale DB record cannot overwrite edits.
+  localStorage.setItem('galata_issue_fallback_' + issue.id, '1');
+  return 'localstorage';
+}
+
+async function removeStoredDraft(id) {
+  const db = globalThis.GalataDraftStore;
+  if (db) {
+    await db.remove(id);
+    if (await db.get(id)) throw new Error('Taslak silinemedi; mevcut kayıt korundu.');
+  }
+  clearLegacyDraft(id);
+}
+
 /**
  * Resilient Issue List Loader:
  * Automatically probes environment, falls back to static catalog / hardcoded registry,
@@ -218,25 +321,20 @@ async function loadIssuesList(selectedId = null) {
 
     // 3. Built-in hardcoded fallback if static index is missing
     if (!issues || !Array.isArray(issues) || issues.length === 0) {
-      issues = FALLBACK_ISSUES_CATALOG;
+      // The fallback constant is immutable reference data; never append drafts to it.
+      issues = FALLBACK_ISSUES_CATALOG.map(item => ({...item}));
     }
   }
 
+  let draftIds = new Set();
   if (activeRuntimeMode === 'static') {
-    // New local drafts survive a reload, but are never presented as published issues.
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (!key || !/^galata_issue_[0-9]{4}-[0-9]{2}-[a-z0-9-]+$/.test(key)) continue;
-      try {
-        const draft = JSON.parse(localStorage.getItem(key));
-        if (!draft || key !== 'galata_issue_' + draft.id ||
-            issues.some(existing => existing.id === draft.id)) continue;
-        issues.push({ id: draft.id, month: draft.month, year: draft.year,
-          issueNumber: draft.issueNumber, title: draft.month + ' ' + draft.year,
-          totalArticles: (draft.articles || []).length, localDraft: true });
-      } catch (err) {
-        console.warn('Geçersiz yerel taslak atlandı:', key, err.message);
-      }
+    const drafts = await listStoredDrafts();
+    draftIds = new Set(drafts.map(draft => draft.id));
+    for (const draft of drafts) {
+      if (issues.some(existing => existing.id === draft.id)) continue;
+      issues.push({ id: draft.id, month: draft.month, year: draft.year,
+        issueNumber: draft.issueNumber, title: draft.month + ' ' + draft.year,
+        totalArticles: draft.articles.length, localDraft: true });
     }
     issues.sort((a, b) => (a.issueNumber || 0) - (b.issueNumber || 0));
   }
@@ -250,7 +348,7 @@ async function loadIssuesList(selectedId = null) {
       const option = document.createElement('option');
       option.value = issue.id;
       // Mark if modified in localStorage
-      const hasLocalChanges = !!localStorage.getItem(`galata_issue_${issue.id}`);
+      const hasLocalChanges = draftIds.has(issue.id);
       option.textContent = `${issue.month} ${issue.year} (Sayı ${issue.issueNumber})${hasLocalChanges ? ' ✏️' : ''}`;
       selector.appendChild(option);
     });
@@ -273,6 +371,8 @@ async function loadIssuesList(selectedId = null) {
  * In static mode: checks localStorage first, then fetches data/issues/${id}.json.
  */
 async function selectIssue(issueId) {
+  clearTimeout(draftAutoSaveTimer);
+  ++draftAutoSaveGeneration;
   invalidatePdfReadyLink();
   try {
     let issueData = null;
@@ -280,19 +380,10 @@ async function selectIssue(issueId) {
     // Browser drafts are authoritative until successfully saved to the local API.
     // In particular, a previous offline PUT failure must not be hidden by a
     // later successful GET returning the older server copy.
-    const localDraft = localStorage.getItem(`galata_issue_${issueId}`);
+    const localDraft = await readStoredDraft(issueId);
     if (localDraft) {
-      try {
-        const parsed = JSON.parse(localDraft);
-        if (parsed && parsed.id === issueId && Array.isArray(parsed.articles)) {
-          issueData = parsed;
-          showToast('Tarayıcı taslağı kurtarıldı. Sunucu/GitHub henüz bu değişiklikleri içermeyebilir; JSON yedeği alıp kaydedin.', 'info');
-        } else {
-          console.warn('Taslak kimliği veya yapısı geçersiz:', issueId);
-        }
-      } catch (err) {
-        console.error('Tarayıcı taslağı okunamadı:', err.message);
-      }
+      issueData = localDraft;
+      showToast('Bu cihazda kayıtlı bülten taslağı geri açıldı. Başka cihaz için JSON yedeği alın.', 'info');
     }
 
     if (!issueData && activeRuntimeMode === 'local') {
@@ -994,6 +1085,26 @@ function queuePreviewRender() {
   syncModelFromForms();
   if (renderDebounceTimer) clearTimeout(renderDebounceTimer);
   renderDebounceTimer = setTimeout(renderLivePreview, 120);
+  if (activeRuntimeMode === 'static' && currentIssue?.id) {
+    clearTimeout(draftAutoSaveTimer);
+    const generation = ++draftAutoSaveGeneration;
+    const snapshot = JSON.parse(JSON.stringify(currentIssue));
+    draftAutoSaveTimer = setTimeout(async () => {
+      if (generation !== draftAutoSaveGeneration || currentIssue?.id !== snapshot.id) return;
+      try {
+        validateIssueBeforeSave(snapshot);
+        await saveStoredDraft(snapshot);
+        if (generation === draftAutoSaveGeneration &&
+            JSON.stringify(currentIssue) === JSON.stringify(snapshot)) {
+          hasUnsavedChanges = false;
+          updateIssueSelectOption(snapshot.id, true);
+        }
+      } catch (err) {
+        showToast('Otomatik taslak kaydedilemedi: ' + err.message +
+          '. JSON İndir ile yedek alın.', 'error');
+      }
+    }, 2400);
+  }
 }
 
 /**
@@ -1365,6 +1476,54 @@ function downloadJSON(data, filename) {
   }, 200);
 }
 
+async function restoreJsonBackup(file) {
+  if (!file) return;
+  if (file.size > 40 * 1024 * 1024) throw new Error('JSON yedeği 40 MiB sınırını aşıyor.');
+  let issue;
+  try { issue = JSON.parse(await file.text()); }
+  catch { throw new Error('Geçersiz JSON dosyası.'); }
+  if (!issue || typeof issue !== 'object' || Array.isArray(issue) ||
+      !/^(20[0-9]{2}|2100)-(0[1-9]|1[0-2])-[a-z0-9-]+$/.test(issue.id || '') ||
+      !Array.isArray(issue.articles) || issue.articles.length > 36 ||
+      !issue.culture || typeof issue.culture !== 'object' ||
+      !issue.club || typeof issue.club !== 'object' ||
+      !Number.isInteger(issue.issueNumber) || issue.issueNumber < 1 || issue.issueNumber > 999 ||
+      issue.articles.some(art => !art || typeof art.title !== 'string' ||
+        !Array.isArray(art.photos) || art.photos.length > 4)) {
+    throw new Error('Bu dosya geçerli bir Bülten Stüdyosu yedeği değil.');
+  }
+  // A mismatched ID/month/year silently changes PDF filenames and can
+  // mislabel an official archive. Reject rather than auto-correct imported data.
+  const idParts = /^([0-9]{4})-([0-9]{2})-([a-z0-9-]+)$/.exec(issue.id);
+  const monthEntry = MONTH_ENTRIES.find(entry => entry[0] === issue.month);
+  const startYear = (monthEntry?.[2] >= 7) ? Number(issue.year) : Number(issue.year) - 1;
+  if (!idParts || !monthEntry || Number(idParts[1]) !== Number(issue.year) ||
+      Number(idParts[2]) !== monthEntry[2] || idParts[3] !== monthEntry[1] ||
+      issue.rotaryYear !== startYear + '-' + (startYear + 1)) {
+    throw new Error('Yedekteki ay, yıl ve Rotary dönemi bilgileri birbiriyle uyuşmuyor.');
+  }
+  validateIssueBeforeSave(issue);
+  if (hasUnsavedChanges && !confirm('Açık sayıdaki kaydedilmemiş değişiklikleri bırakıp yedeği açmak istiyor musunuz?')) {
+    return false;
+  }
+  const current = await readStoredDraft(issue.id);
+  if (current && !confirm('Bu aya ait mevcut cihaz taslağı yedek dosyasıyla değiştirilecek. Önceki taslağı indirmek ve devam etmek istiyor musunuz?')) {
+    return false;
+  }
+  if (current) downloadJSON(current, issue.id + '-onceki-taslak-yedek.json');
+  // Cancel any pending old-issue autosave before overwriting the chosen draft.
+  clearTimeout(draftAutoSaveTimer);
+  ++draftAutoSaveGeneration;
+  await saveStoredDraft(issue); // writes only to this browser, never to GitHub
+  const verified = await readStoredDraft(issue.id);
+  if (JSON.stringify(verified) !== JSON.stringify(issue)) {
+    throw new Error('Yedek içe alındıktan sonra geri okuma doğrulanamadı.');
+  }
+  await loadIssuesList(issue.id);
+  showToast('Bülten yedeği bu cihazda geri yüklendi. PDF hazırlayabilirsiniz.', 'success');
+  return true;
+}
+
 /**
  * Validates corporate rules prior to persistence (Turkish-resilient regex)
  */
@@ -1407,6 +1566,8 @@ function validateIssueBeforeSave(data) {
  */
 async function saveCurrentIssue() {
   if (!currentIssue || !currentIssue.id) return null;
+  clearTimeout(draftAutoSaveTimer);
+  ++draftAutoSaveGeneration;
   syncModelFromForms();
   try {
     validateIssueBeforeSave(currentIssue);
@@ -1426,14 +1587,17 @@ async function saveCurrentIssue() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Kaydetme işlemi başarısız.');
       hasUnsavedChanges = false;
-      // A recovered offline draft is no longer pending after a verified server save.
+      // A successful server PUT must also retire the verified IndexedDB copy:
+      // otherwise selectIssue would silently resurrect stale local content.
       try {
-        localStorage.removeItem('galata_issue_' + currentIssue.id);
-        localStorage.removeItem('galata_issue_timestamp_' + currentIssue.id);
+        await removeStoredDraft(currentIssue.id);
+        showToast('Bülten yerel sunucuya kaydedildi; eski tarayıcı taslağı temizlendi.', 'success');
       } catch (storageErr) {
-        console.warn('Eski tarayıcı taslağı temizlenemedi:', storageErr.message);
+        // Server write already succeeded. Never claim it failed or re-stage an
+        // older draft as a new offline PUT. Surface incomplete cache cleanup.
+        console.warn('Sunucu kaydı başarılı; eski cihaz taslağı temizlenemedi:', storageErr.message);
+        showToast('Sunucu kaydı başarılı, ancak eski cihaz taslağı silinemedi. JSON yedeği alıp cihaz depolamasını kontrol edin.', 'error');
       }
-      showToast('Bülten yerel sunucudaki JSON dosyasına kaydedildi.', 'success');
       renderLivePreview();
       return 'server';
     } catch (err) {
@@ -1443,12 +1607,11 @@ async function saveCurrentIssue() {
   }
 
   try {
-    localStorage.setItem('galata_issue_' + currentIssue.id, JSON.stringify(currentIssue, null, 2));
-    localStorage.setItem('galata_issue_timestamp_' + currentIssue.id, new Date().toISOString());
+    const storage = await saveStoredDraft(currentIssue);
     hasUnsavedChanges = false;
     showToast(serverSaveFailed
-      ? 'Sunucuya kaydedilemedi! Yalnız tarayıcıda taslak var. JSON dosyasını indirin.'
-      : 'Tarayıcı taslağı kaydedildi. GitHub ve resmî PDF güncellenmedi.',
+      ? 'Sunucuya kaydedilemedi! Taslak yalnız bu cihazda korundu. JSON yedeği alın.'
+      : (storage === 'indexeddb' ? 'Bülten bu cihazın kalıcı taslak alanına kaydedildi.' : 'Bülten tarayıcı taslağına kaydedildi; JSON yedeği alın.'),
       serverSaveFailed ? 'error' : 'info');
     renderLivePreview();
     updateIssueSelectOption(currentIssue.id, true);
@@ -1522,7 +1685,7 @@ async function exportPdf() {
   if (!currentIssue || !currentIssue.id || pdfExportBusy) return;
 
   // Unedited archive documents retain their original vector PDF quality.
-  const draftExists = Boolean(localStorage.getItem('galata_issue_' + currentIssue.id));
+  const draftExists = Boolean(await readStoredDraft(currentIssue.id));
   const officialPdfName = ISSUE_PDF_MAP[currentIssue.id];
   if (activeRuntimeMode === 'static' && !hasUnsavedChanges && !draftExists && officialPdfName) {
     const a = document.createElement('a');
@@ -1609,10 +1772,62 @@ async function syncWithRotaClub() {
  * Converts a File object into a Base64 Data URL (used in static mode and offline)
  */
 function readImageAsDataUrl(file) {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     if (!/^image\/(?:jpeg|png|webp)$/.test(file.type) || file.size > 6 * 1024 * 1024) {
-      return reject(new Error('Lütfen geçerli bir görsel dosyası seçin (JPEG, PNG, WebP, en çok 6 MiB).'));
+      reject(new Error('Lütfen geçerli bir görsel dosyası seçin (JPEG, PNG, WebP, en çok 6 MiB).'));
+      return;
     }
+    // Optimize only user-uploaded images. Local/archived source files are never
+    // overwritten, and the original on the user's device remains untouched.
+    if (typeof createImageBitmap === 'function' && typeof Blob !== 'undefined' &&
+        file instanceof Blob && typeof document?.createElement === 'function') {
+      let bitmap = null, canvas = null;
+      try {
+        bitmap = await createImageBitmap(file);
+        const pixels = bitmap.width * bitmap.height;
+        if (!pixels || pixels > 40_000_000) {
+          throw new Error('Fotoğraf piksel boyutu çok büyük (en fazla 40 MP).');
+        }
+        if (file.size >= 350 * 1024 || Math.max(bitmap.width, bitmap.height) > 1920) {
+          const scale = Math.min(1, 1920 / Math.max(bitmap.width, bitmap.height));
+          canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+          canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+          const context = canvas.getContext('2d', {alpha:true});
+          if (!context) throw new Error('Fotoğraf işleme desteği yok.');
+          context.imageSmoothingEnabled = true;
+          context.imageSmoothingQuality = 'high';
+          context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+          let compressed = canvas.toDataURL('image/webp', 0.84);
+          if (!compressed.startsWith('data:image/webp;base64,')) {
+            // Unavailable WebP encoder: use a white-backed, high-quality JPEG.
+            context.globalCompositeOperation = 'destination-over';
+            context.fillStyle = '#fff';
+            context.fillRect(0, 0, canvas.width, canvas.height);
+            compressed = canvas.toDataURL('image/jpeg', 0.87);
+          }
+          if (compressed.length > 2_600_000) {
+            compressed = canvas.toDataURL('image/webp', 0.72);
+          }
+          if (compressed.length > 2_600_000) {
+            throw new Error('Fotoğraf PDF için hâlâ büyük. Daha küçük boyutlu dosya seçin.');
+          }
+          resolve(compressed);
+          return;
+        }
+      } catch (error) {
+        if (/çok büyük|hâlâ büyük/.test(error.message)) {
+          reject(error);
+          return;
+        }
+        console.warn('Fotoğraf optimizasyonu atlandı; kaynak biçimi deneniyor:',error.message);
+      } finally {
+        bitmap?.close?.();
+        if (canvas) { canvas.width = 1; canvas.height = 1; }
+      }
+    }
+    // Compatibility path for browsers without canvas/bitmap APIs and for
+    // existing local-mode test harnesses; IndexedDB can store these data URLs.
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result);
     reader.onerror = () => reject(new Error('Görsel dosyası okunamadı.'));
@@ -1681,7 +1896,7 @@ async function startNewIssue(payload) {
       throw new Error('Ay, yıl veya sayı numarası geçersiz.');
     }
     const id = year + '-' + String(month[2]).padStart(2, '0') + '-' + month[1];
-    if (availableIssues.some(issue => issue.id === id) || localStorage.getItem('galata_issue_' + id)) {
+    if (availableIssues.some(issue => issue.id === id) || await readStoredDraft(id)) {
       throw new Error('Bu aya ait bir bülten zaten mevcut: ' + id);
     }
     if (!currentIssue) throw new Error('Künye kopyalanabilecek mevcut sayı bulunamadı.');
@@ -1706,8 +1921,7 @@ async function startNewIssue(payload) {
         announcements: [],
         book: { title: '', author: '', cover: '', summary: '' } }
     };
-    localStorage.setItem('galata_issue_' + id, JSON.stringify(draft));
-    localStorage.setItem('galata_issue_timestamp_' + id, new Date().toISOString());
+    await saveStoredDraft(draft);
     closeNewIssueModal();
     await loadIssuesList(id);
     showToast('Yeni sayı bu cihazda taslak olarak açıldı. PDF İndir ile yayımlamadan dosya oluşturabilirsiniz.', 'info');
@@ -1859,6 +2073,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 5. Action Buttons & Export Controls
   document.getElementById('btn-save')?.addEventListener('click', saveCurrentIssue);
+  document.getElementById('btn-import-json')?.addEventListener('click', () =>
+    document.getElementById('inp-import-json')?.click());
+  document.getElementById('inp-import-json')?.addEventListener('change', async event => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    try { await restoreJsonBackup(file); }
+    catch (err) { showToast('JSON geri yüklenemedi: ' + err.message, 'error'); }
+  });
   document.getElementById('btn-download-json')?.addEventListener('click', () => {
     if (!currentIssue) return;
     syncModelFromForms();
@@ -1870,16 +2093,24 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!currentIssue || !currentIssue.id) return;
     if (confirm(`"${currentIssue.month} ${currentIssue.year}" sayısının yerel değişiklikleri silinip orijinal versiyonuna dönülsün mü?`)) {
       // Automatic recovery download before deleting a browser-only draft.
-      const existingDraft = localStorage.getItem('galata_issue_' + currentIssue.id);
+      const existingDraft = await readStoredDraft(currentIssue.id);
       if (existingDraft) {
-        try { downloadJSON(JSON.parse(existingDraft), currentIssue.id + '-silinmeden-once-yedek.json'); }
+        try { downloadJSON(existingDraft, currentIssue.id + '-silinmeden-once-yedek.json'); }
         catch (err) { showToast('Taslak yedeklenemedi: ' + err.message, 'error'); return; }
       }
-      localStorage.removeItem(`galata_issue_${currentIssue.id}`);
-      localStorage.removeItem(`galata_issue_timestamp_${currentIssue.id}`);
-      showToast('Yerel değişiklikler temizlendi, orijinal bülten yükleniyor...', 'info');
-      await selectIssue(currentIssue.id);
-      await loadIssuesList(currentIssue.id);
+      clearTimeout(draftAutoSaveTimer);
+      ++draftAutoSaveGeneration;
+      const removedId = currentIssue.id;
+      const wasLocalOnly = availableIssues.some(item => item.id === removedId && item.localDraft);
+      try { await removeStoredDraft(removedId); }
+      catch (err) { showToast('Taslak silinemedi: ' + err.message, 'error'); return; }
+      // A newly created month has no static archive to reload after deletion.
+      // Return to a known official issue instead of showing a broken 404 page.
+      const fallbackId = wasLocalOnly ? '2026-09-eylul' : removedId;
+      showToast(wasLocalOnly
+        ? 'Yerel sayı taslağı kaldırıldı; arşiv sayısına dönülüyor.'
+        : 'Yerel değişiklikler temizlendi; arşivden yeniden açılıyor.', 'info');
+      await loadIssuesList(fallbackId);
     }
   });
 
