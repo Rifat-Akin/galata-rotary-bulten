@@ -1066,6 +1066,28 @@ async function runEmpiricalChallengeSuite() {
 
       assert('Live Title Sync: Card header preview synchronizes instantaneously', titleSyncResult?.previewText === 'Rotary Barış Konferansı 2026', titleSyncResult?.previewText);
 
+      // In the real DOM, the parent's generic 'input' listener executes BEFORE
+      // the delegated article-field listener. Autosave must read the model
+      // after both handlers, not snapshot the previous title at event time.
+      const autoSavedArticleTitle = await session.eval(`(async () => {
+        const expected = 'Rotary Barış Konferansı 2026';
+        let saved = null;
+        for (let retry = 0; retry < 22; retry++) {
+          await new Promise(resolve => setTimeout(resolve, 175));
+          saved = await globalThis.GalataDraftStore.get('2026-09-eylul');
+          if (saved?.articles?.[0]?.title === expected) break;
+        }
+        const result = {storedTitle: saved?.articles?.[0]?.title,
+          visibleTitle: document.querySelector('.article-card-item[data-index="0"] .art-field[data-field="title"]')?.value};
+        await globalThis.GalataDraftStore.remove('2026-09-eylul');
+        return result;
+      })()`);
+      assert('Article edits are persisted after delegated input handlers, not just previewed',
+        autoSavedArticleTitle?.storedTitle === 'Rotary Barış Konferansı 2026' &&
+        autoSavedArticleTitle?.visibleTitle === 'Rotary Barış Konferansı 2026',
+        JSON.stringify(autoSavedArticleTitle));
+
+
       
       // Real IndexedDB round-trip, migration foundation and cleanup.
       const durableDraftResult = await session.eval(`(async () => {

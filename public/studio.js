@@ -1088,10 +1088,14 @@ function queuePreviewRender() {
   if (activeRuntimeMode === 'static' && currentIssue?.id) {
     clearTimeout(draftAutoSaveTimer);
     const generation = ++draftAutoSaveGeneration;
-    const snapshot = JSON.parse(JSON.stringify(currentIssue));
+    const issueId = currentIssue.id;
+    // The parent pane's input handler runs before the delegated article/photo
+    // handlers. Snapshotting here would capture yesterday's title or caption.
+    // Take the immutable copy only after the entire input event has finished.
     draftAutoSaveTimer = setTimeout(async () => {
-      if (generation !== draftAutoSaveGeneration || currentIssue?.id !== snapshot.id) return;
+      if (generation !== draftAutoSaveGeneration || currentIssue?.id !== issueId) return;
       try {
+        const snapshot = JSON.parse(JSON.stringify(currentIssue));
         validateIssueBeforeSave(snapshot);
         await saveStoredDraft(snapshot);
         if (generation === draftAutoSaveGeneration &&
