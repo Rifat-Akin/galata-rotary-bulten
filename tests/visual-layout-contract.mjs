@@ -148,7 +148,7 @@ test('Pages uses cache-versioned modules and officially downloaded PDFs', () => 
   const tag = '20261105-monthly15';
   assert.ok(studio.includes('src="renderer.js?v=' + tag + '"'),
     'renderer module must bypass cached pre-release JavaScript');
-  assert.ok(studio.includes('src="studio.js?v=20261105-drafts16"'),
+  assert.ok(studio.includes('src="studio.js?v=20261107-autosave17"'),
     'editor controller must bypass cached pre-release JavaScript');
   assert.ok(controller.includes("const PUBLIC_RELEASE_TAG = '" + tag + "'"),
     'official PDF cache revision should match the visible JavaScript release');
