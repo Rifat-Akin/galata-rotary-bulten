@@ -24,7 +24,7 @@ let previousPdfBlobUrl = null;
 
 // Asset release token: PDF downloads must not reuse a stale browser cache
 // after a new GitHub Pages publish. Keep synced with the module URLs in index.html.
-const PUBLIC_RELEASE_TAG = '20261105-drafts16';
+const PUBLIC_RELEASE_TAG = '20261105-monthly15';
 
 // Official Pre-Rendered PDF Mapping
 const ISSUE_PDF_MAP = {
