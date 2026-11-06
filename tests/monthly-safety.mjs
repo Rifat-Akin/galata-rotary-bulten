@@ -83,3 +83,21 @@ test('future Rotary year never presents previous president or official theme as 
   assert.doesNotMatch(rendered,/Gökhan Alpertunga/);
   assert.doesNotMatch(rendered,/Olayinka Hakeem Babalola/);
 });
+
+test('blank new-month book cover uses bundled placeholder instead of invalid src=""', () => {
+  const issue=load('2026-09-eylul');
+  issue.id='2098-11-kasim';
+  issue.month='Kasım';
+  issue.year=2098;
+  issue.rotaryYear='2098-2099';
+  issue.theme='';
+  issue.articles=[];
+  issue.culture={title:'Galata Kültür Köşesi',
+    announcements:[],book:{title:'',author:'',cover:'',summary:''}};
+  issue.presidentMessage={title:'Yeni ay',body:'',photo:''};
+  const html=renderIssueToHTML(issue);
+  assert.equal((html.match(/class="a4-page/g)||[]).length,4);
+  assert.doesNotMatch(html,/\bsrc=""/);
+  assert.match(html,/class="book-cover-img book-cover-placeholder"/);
+  assert.match(html,/assets\/brand\/galata-silhouette\.svg/);
+});
