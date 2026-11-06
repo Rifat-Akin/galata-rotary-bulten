@@ -1094,7 +1094,7 @@ async function runEmpiricalChallengeSuite() {
         const id = '2099-11-kasim';
         const src = await fetch('/data/issues/2026-09-eylul.json').then(r=>r.json());
         const text = 'SENTETİK_YEDEK_GERI_YUKLEME';
-        const backup = {...src,id,month:'Kasım',year:2099,issueNumber:27,
+        const backup = {...src,id,month:'Kasım',year:2099,rotaryYear:'2099-2100',issueNumber:27,
           articles:[],presidentMessage:{...src.presidentMessage,title:text},
           culture:{title:'Galata Kültür Köşesi',announcements:[],book:{title:'',author:'',cover:'',summary:''}}};
         const confirmOriginal = window.confirm;
