@@ -192,21 +192,27 @@ function readLegacyDraft(id) {
   }
 }
 
+function clearLegacyDraft(id) {
+  localStorage.removeItem('galata_issue_' + id);
+  localStorage.removeItem('galata_issue_timestamp_' + id);
+  localStorage.removeItem('galata_issue_fallback_' + id);
+}
+
 async function readStoredDraft(id) {
   const legacy = readLegacyDraft(id);
   const db = globalThis.GalataDraftStore;
   if (!db) return legacy;
   try {
-    const record = await db.get(id);
+    // If the last IndexedDB write failed, its older copy must NOT obscure the
+    // newer localStorage fallback. Re-migrate only after verified readback.
+    const newerFallback = legacy && localStorage.getItem('galata_issue_fallback_' + id);
+    const record = newerFallback ? null : await db.get(id);
     if (record?.id === id && Array.isArray(record.articles)) return record;
     if (legacy) {
-      // Migrating must be reversible: never delete a legacy copy until the
-      // IndexedDB write has been read back byte-for-byte.
       await db.put(legacy);
       const verified = await db.get(id);
       if (JSON.stringify(verified) === JSON.stringify(legacy)) {
-        localStorage.removeItem('galata_issue_' + id);
-        localStorage.removeItem('galata_issue_timestamp_' + id);
+        clearLegacyDraft(id);
         return verified;
       }
     }
@@ -233,7 +239,7 @@ async function listStoredDrafts() {
     const key = localStorage.key(i);
     if (!key || !/^galata_issue_[0-9]{4}-[0-9]{2}-[a-z0-9-]+$/.test(key)) continue;
     const id = key.slice('galata_issue_'.length);
-    if (!byId.has(id)) {
+    if (!byId.has(id) || localStorage.getItem('galata_issue_fallback_' + id)) {
       const item = readLegacyDraft(id);
       if (item) byId.set(id, item);
     }
@@ -250,9 +256,8 @@ async function saveStoredDraft(issue) {
       if (JSON.stringify(readBack) !== JSON.stringify(issue)) {
         throw new Error('Kaydedilen taslak geri okunamadı');
       }
-      // Remove an older localStorage copy only after read-back succeeds.
-      localStorage.removeItem('galata_issue_' + issue.id);
-      localStorage.removeItem('galata_issue_timestamp_' + issue.id);
+      // Only retire old or fallback copies after exact readback succeeds.
+      clearLegacyDraft(issue.id);
       return 'indexeddb';
     } catch (err) {
       console.warn('IndexedDB yazma başarısız, localStorage deneniyor:', err.message);
@@ -260,6 +265,8 @@ async function saveStoredDraft(issue) {
   }
   localStorage.setItem('galata_issue_' + issue.id, JSON.stringify(issue, null, 2));
   localStorage.setItem('galata_issue_timestamp_' + issue.id, new Date().toISOString());
+  // Mark precedence explicitly so a stale DB record cannot overwrite edits.
+  localStorage.setItem('galata_issue_fallback_' + issue.id, '1');
   return 'localstorage';
 }
 
@@ -269,8 +276,7 @@ async function removeStoredDraft(id) {
     await db.remove(id);
     if (await db.get(id)) throw new Error('Taslak silinemedi; mevcut kayıt korundu.');
   }
-  localStorage.removeItem('galata_issue_' + id);
-  localStorage.removeItem('galata_issue_timestamp_' + id);
+  clearLegacyDraft(id);
 }
 
 /**
