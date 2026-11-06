@@ -39,7 +39,7 @@ test('new monthly issue PDF stays separate from indexed storage',()=>{
   assert.match(index,/draft-store\.js\?v=20261105-drafts16/);
   assert.match(index,/id="btn-import-json"/);
   assert.match(index,/id="inp-import-json"/);
-  assert.match(index,/studio\.js\?v=20261105-drafts16/);
+  assert.match(index,/studio\.js\?v=20261107-autosave17/);
   assert.match(index,/Metinli PDF \/ Yazdır/);
   assert.match(pdf,/export async function buildDraftPdf/);
   assert.doesNotMatch(pdf,/fetch\('/);
