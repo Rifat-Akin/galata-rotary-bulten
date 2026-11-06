@@ -1148,6 +1148,31 @@ async function runEmpiricalChallengeSuite() {
         JSON.stringify(exportResult));
       assert('PDF exporter cleans its temporary DOM stage', exportResult?.remains === 0);
 
+      // An empty upcoming issue is a valid starting point: no cover image,
+      // no book recommendation, no articles and a new Rotary period.
+      const emptyMonthPdf = await session.eval(`(async () => {
+        const issue = await fetch('/data/issues/2026-09-eylul.json').then(r => r.json());
+        issue.id = '2098-11-kasim';
+        issue.year = 2098;
+        issue.month = 'Kasım';
+        issue.rotaryYear = '2098-2099';
+        issue.theme = '';
+        issue.officers = {president:'',secretary:'',treasurer:'',bulletinCommittee:[]};
+        issue.presidentMessage = {title:'Yeni Ay Başkan Mesajı',body:'',photo:''};
+        issue.articles = [];
+        issue.culture = {title:'Galata Kültür Köşesi',announcements:[],
+          book:{title:'',author:'',cover:'',summary:''}};
+        const module = await import('/pdf-download.js?test=blank-month');
+        const result = await module.buildDraftPdf(issue, globalThis.BulletinRenderer);
+        const magic = String.fromCharCode(...new Uint8Array(await result.blob.slice(0,5).arrayBuffer()));
+        return {magic,pages:result.pages,bytes:result.blob.size,
+          leftoverStages:document.querySelectorAll('.bulletin-local-export-stage').length};
+      })()`);
+      assert('New empty monthly issue renders a valid 4-page downloadable PDF without book cover',
+        emptyMonthPdf?.magic === '%PDF-' && emptyMonthPdf?.pages === 4 &&
+        emptyMonthPdf?.bytes > 150_000 && emptyMonthPdf?.leftoverStages === 0,
+        JSON.stringify(emptyMonthPdf));
+
     }
   } finally {
     if (session) session.close();
